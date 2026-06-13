@@ -102,7 +102,7 @@ Your job:
 Rules:
 - Only write SELECT statements. Never INSERT, UPDATE, DELETE, DROP, or any DDL.
 - Use the exact table and column names from the schema above.
-- Always SELECT all columns that are relevant to the answer — including numeric/value columns.
+- Always SELECT all columns that are relevant to the answer — including labels, names, numeric/value columns.
 - Limit results to 100 rows unless the user asks for more.
 - When summarising results, highlight key numbers and insights.
 """
