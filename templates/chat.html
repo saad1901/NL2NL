@@ -431,15 +431,92 @@ async function loadModels() {
         banner.id = 'noModelBanner';
         banner.className = 'flex flex-col items-center justify-center h-full text-center py-10';
         banner.innerHTML = `
-          <div class="w-14 h-14 rounded-2xl bg-brand-600/10 border border-brand-500/15 flex items-center justify-center mb-4">
-            <svg class="w-7 h-7 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-            </svg>
+          <p class="text-base font-semibold text-white mb-1">No AI model configured</p>
+          <p class="text-sm text-gray-500 mb-6">Get a free API key to start. Choose one of the options below.</p>
+
+          <div class="grid grid-cols-2 gap-4 w-full max-w-2xl text-left">
+
+            <!-- OpenRouter card -->
+            <div class="glass rounded-2xl p-5 space-y-3 border border-white/8">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-white">OpenRouter</p>
+                  <p class="text-xs text-gray-500">Access many free models</p>
+                </div>
+              </div>
+              <ol class="space-y-1.5 text-xs text-gray-400 list-decimal list-inside">
+                <li>Go to <a href="https://openrouter.ai/keys" target="_blank" class="text-brand-400 hover:underline">openrouter.ai/keys</a></li>
+                <li>Sign up and create a free API key</li>
+                <li>Add it in <a href="/settings/" class="text-brand-400 hover:underline">Settings → OpenRouter</a></li>
+                <li>Add any of these free models:</li>
+              </ol>
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/4 border border-white/8">
+                  <code class="text-xs text-purple-300">google/gemma-3-27b-it:free</code>
+                  <button onclick="copyText('google/gemma-3-27b-it:free', this)" class="text-xs text-gray-600 hover:text-brand-400 transition flex-shrink-0 ml-2">Copy</button>
+                </div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/4 border border-white/8">
+                  <code class="text-xs text-purple-300">google/gemma-4-31b-it:free</code>
+                  <button onclick="copyText('google/gemma-4-31b-it:free', this)" class="text-xs text-gray-600 hover:text-brand-400 transition flex-shrink-0 ml-2">Copy</button>
+                </div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/4 border border-white/8">
+                  <code class="text-xs text-purple-300">deepseek/deepseek-chat-v3-0324:free</code>
+                  <button onclick="copyText('deepseek/deepseek-chat-v3-0324:free', this)" class="text-xs text-gray-600 hover:text-brand-400 transition flex-shrink-0 ml-2">Copy</button>
+                </div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/4 border border-white/8">
+                  <code class="text-xs text-purple-300">openai/gpt-4o-mini:free</code>
+                  <button onclick="copyText('openai/gpt-4o-mini:free', this)" class="text-xs text-gray-600 hover:text-brand-400 transition flex-shrink-0 ml-2">Copy</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gemini card -->
+            <div class="glass rounded-2xl p-5 space-y-3 border border-white/8">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-white">Google Gemini</p>
+                  <p class="text-xs text-gray-500">Free via AI Studio</p>
+                </div>
+              </div>
+              <ol class="space-y-1.5 text-xs text-gray-400 list-decimal list-inside">
+                <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" class="text-brand-400 hover:underline">aistudio.google.com/apikey</a></li>
+                <li>Sign in with Google and create a key</li>
+                <li>Add it in <a href="/settings/" class="text-brand-400 hover:underline">Settings → Google Gemini</a></li>
+                <li>Add any of these free models:</li>
+              </ol>
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/4 border border-white/8">
+                  <code class="text-xs text-blue-300">gemini-2.0-flash</code>
+                  <button onclick="copyText('gemini-2.0-flash', this)" class="text-xs text-gray-600 hover:text-brand-400 transition flex-shrink-0 ml-2">Copy</button>
+                </div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/4 border border-white/8">
+                  <code class="text-xs text-blue-300">gemini-2.0-flash-lite</code>
+                  <button onclick="copyText('gemini-2.0-flash-lite', this)" class="text-xs text-gray-600 hover:text-brand-400 transition flex-shrink-0 ml-2">Copy</button>
+                </div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/4 border border-white/8">
+                  <code class="text-xs text-blue-300">gemini-1.5-flash</code>
+                  <button onclick="copyText('gemini-1.5-flash', this)" class="text-xs text-gray-600 hover:text-brand-400 transition flex-shrink-0 ml-2">Copy</button>
+                </div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/4 border border-white/8">
+                  <code class="text-xs text-blue-300">gemini-1.5-flash-8b</code>
+                  <button onclick="copyText('gemini-1.5-flash-8b', this)" class="text-xs text-gray-600 hover:text-brand-400 transition flex-shrink-0 ml-2">Copy</button>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <p class="text-base font-medium text-white mb-1">No AI model configured</p>
-          <p class="text-sm text-gray-500 max-w-xs mb-5">Add an API key and model in Settings to start querying in plain English.</p>
-          <a href="/settings/"
-            class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-xl transition glow-sm">
+
+          <a href="/settings/" class="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-xl transition glow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -923,6 +1000,14 @@ function getCookie(name) {
 }
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('text-green-400');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('text-green-400'); }, 1500);
+  });
 }
 
 async function clearHistory() {
