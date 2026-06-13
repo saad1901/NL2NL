@@ -209,9 +209,6 @@ def fetch_schema(db: DatabaseConnection) -> str:
 # ── Query executor ─────────────────────────────────────────────────────────────
 
 def execute_query(db: DatabaseConnection, sql: str) -> dict:
-    print("="*40)
-    print(sql)
-    print("="*40)
     
     """
     Execute a SQL string against the database and return:

@@ -13,7 +13,7 @@ import sqlite3
 
 logger = logging.getLogger('app.views')
 
-from .models import DatabaseConnection, QueryHistory
+from .models import DatabaseConnection, QueryHistory, LLMProvider, LLMModel
 from .aiTools import fetch_schema
 from .aiView import run_nl_query
 
@@ -144,6 +144,22 @@ def ask_view(request, db_id):
     def event_stream():
         import queue, threading
 
+        # Resolve LLM model from user's settings
+        llm_model = None
+        model_id = data.get('model_id')
+        if model_id:
+            try:
+                llm_model = LLMModel.objects.select_related('provider').get(
+                    id=model_id, user=request.user
+                )
+            except LLMModel.DoesNotExist:
+                pass
+        # Fallback: use user's default model
+        if not llm_model:
+            llm_model = LLMModel.objects.filter(
+                user=request.user, is_default=True
+            ).select_related('provider').first()
+
         q = queue.Queue()
 
         def status_cb(step, detail=""):
@@ -151,7 +167,7 @@ def ask_view(request, db_id):
 
         def run():
             try:
-                result = run_nl_query(question, db, status_cb=status_cb)
+                result = run_nl_query(question, db, status_cb=status_cb, llm_model=llm_model)
                 q.put(('result', result))
             except Exception as e:
                 logger.error(f"[ASK VIEW] Unhandled error: {e}", exc_info=True)
@@ -360,6 +376,99 @@ def upload_file_db_view(request):
         return redirect(f'/chat/{db.id}/')
 
     return render(request, 'upload_file_db.html', ctx)
+
+
+
+# ── Settings: LLM Providers & Models ──────────────────────────────────────────
+
+def settings_view(request):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+    providers = LLMProvider.objects.filter(user=request.user).prefetch_related('models')
+    all_dbs   = DatabaseConnection.objects.filter(user=request.user)
+    return render(request, 'settings.html', {
+        'user': request.user,
+        'providers': providers,
+        'provider_choices': LLMProvider.PROVIDER_CHOICES,
+        'all_dbs': all_dbs,
+    })
+
+
+@require_POST
+def save_provider_view(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    provider   = request.POST.get('provider', '').strip()
+    api_key    = request.POST.get('api_key', '').strip()
+    base_url   = request.POST.get('base_url', 'http://localhost:11434').strip()
+
+    valid = [p for p, _ in LLMProvider.PROVIDER_CHOICES]
+    if provider not in valid:
+        return JsonResponse({'error': 'Invalid provider.'}, status=400)
+
+    obj, created = LLMProvider.objects.update_or_create(
+        user=request.user, provider=provider,
+        defaults={'api_key': api_key, 'base_url': base_url},
+    )
+    logger.info(f"[SETTINGS] Provider '{provider}' {'created' if created else 'updated'} for {request.user.email}")
+    return JsonResponse({'ok': True, 'id': obj.id, 'masked_key': obj.masked_key()})
+
+
+@require_POST
+def delete_provider_view(request, provider_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    obj = get_object_or_404(LLMProvider, id=provider_id, user=request.user)
+    obj.delete()
+    return JsonResponse({'ok': True})
+
+
+@require_POST
+def save_model_view(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    provider_id  = request.POST.get('provider_id')
+    model_id     = request.POST.get('model_id', '').strip()
+    display_name = request.POST.get('display_name', '').strip()
+    is_default   = request.POST.get('is_default') == 'true'
+
+    if not model_id or not display_name:
+        return JsonResponse({'error': 'model_id and display_name are required.'}, status=400)
+
+    provider = get_object_or_404(LLMProvider, id=provider_id, user=request.user)
+
+    if is_default:
+        # clear existing default for this user
+        LLMModel.objects.filter(user=request.user, is_default=True).update(is_default=False)
+
+    obj, created = LLMModel.objects.update_or_create(
+        user=request.user, provider=provider, model_id=model_id,
+        defaults={'display_name': display_name, 'is_default': is_default},
+    )
+    return JsonResponse({'ok': True, 'id': obj.id, 'display_name': display_name,
+                         'model_id': model_id, 'provider_id': provider.id,
+                         'provider_name': provider.get_provider_display(),
+                         'is_default': obj.is_default})
+
+
+@require_POST
+def delete_model_view(request, model_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    obj = get_object_or_404(LLMModel, id=model_id, user=request.user)
+    obj.delete()
+    return JsonResponse({'ok': True})
+
+
+def models_for_chat_view(request):
+    """Returns all user models as JSON — used by chat to populate selector."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    models_qs = LLMModel.objects.filter(user=request.user).select_related('provider')
+    data = [{'id': m.id, 'display_name': m.display_name, 'model_id': m.model_id,
+              'provider': m.provider.provider, 'is_default': m.is_default}
+             for m in models_qs]
+    return JsonResponse({'models': data})
 
 
 def clear_history_view(request, db_id):

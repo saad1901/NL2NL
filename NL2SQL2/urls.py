@@ -32,4 +32,10 @@ urlpatterns = [
     path('databases/add/', views.add_database_view, name='add_database'),
     path('databases/upload/', views.upload_file_db_view, name='upload_file_db'),
     path('databases/<int:db_id>/delete/', views.delete_database_view, name='delete_database'),
+    path('settings/', views.settings_view, name='settings'),
+    path('settings/providers/save/', views.save_provider_view, name='save_provider'),
+    path('settings/providers/<int:provider_id>/delete/', views.delete_provider_view, name='delete_provider'),
+    path('settings/models/save/', views.save_model_view, name='save_model'),
+    path('settings/models/<int:model_id>/delete/', views.delete_model_view, name='delete_model'),
+    path('api/models/', views.models_for_chat_view, name='models_for_chat'),
 ]

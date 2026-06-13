@@ -1,17 +1,62 @@
-# Python-generated files
+# ==========================================
+# 1. Database Storage Files (CRITICAL for SQLite)
+# ==========================================
+# This blocks your local testing data from overwriting PythonAnywhere.
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Also block generic backup or query export dumps
+*.sql
+*.tar
+*.dump
+
+# ==========================================
+# 2. Python Environment & Bytecode Cache
+# ==========================================
 __pycache__/
-*.py[oc]
+*.py[cod]
+*$py.class
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 
-# Virtual environments
-.venv
-.env
+# ==========================================
+# 3. Virtual Environments
+# ==========================================
+.venv/
+venv/
+env/
+.env/
+
+# Dependency manager locks (keep pyproject.toml tracked, ignore local lock variations)
 uv.lock
-pyproject.toml
-*.sqlite3
-*.db
-.log
+
+# ==========================================
+# 4. Runtime Secrets & Environments
+# ==========================================
+# Protects security tokens and hidden architecture keys
+.env
+.secrets
+*.env
+secrets.json
+
+# ==========================================
+# 5. Local Project Tracking & IDE Configs
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
 PROJECT_CONTEXT.md
+todo.md
+*.log
+user_data/*
+# ==========================================
+# 6. Django Database Migrations (Safety Settings)
+# ==========================================
+# We track the structural migration code files so both databases match,
+# but we ignore dirty Python pre-compile artifacts.
+*/migrations/__pycache__/

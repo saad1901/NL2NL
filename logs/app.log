@@ -767,3 +767,353 @@ Maruti | Maruti Swift VXI BSIII | 250000 | 806599 | Most Driven
 *   **Least Driven:** A **Mahindra Quanto C6** with only **1 km** driven, priced at **250,000**.
 *   **Most Driven:** A **Maruti Swift
 [2026-06-13 15:08:57] INFO app.ai — [QUERY DONE] sql=True rows=2 error=False
+[2026-06-13 16:12:23] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:12:55] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:16:11] INFO app.views — [CLEAR HISTORY] db='Cars Dataset 1' user='saadiqbal1921@gmail.com' deleted=18 entries
+[2026-06-13 16:16:26] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:16:42] INFO app.ai — [QUERY START] db='Cars Dataset 1' (id=4) question='which car is costiest and cheapest and what are their model years'
+[2026-06-13 16:16:42] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:16:42] DEBUG app.ai — [LLM CALL 1] Sending to gemini/gemini-3-flash-preview
+[2026-06-13 16:16:43] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:16:44] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=True preview=''
+[2026-06-13 16:16:44] DEBUG app.ai — [TOOL CALL] Structured. SQL: SELECT Brand, Model, Year, Selling_Price
+FROM data
+WHERE Selling_Price = (SELECT MAX(Selling_Price) FROM data)
+UNION ALL
+SELECT Brand, Model, Year, Selling_Price
+FROM data
+WHERE Selling_Price = (SELEC
+[2026-06-13 16:16:44] INFO app.ai — [EXECUTE SQL] SELECT Brand, Model, Year, Selling_Price
+FROM data
+WHERE Selling_Price = (SELECT MAX(Selling_Price) FROM data)
+UNION ALL
+SELECT Brand, Model, Year, Selling_Price
+FROM data
+WHERE Selling_Price = (SELECT MIN(Selling_Price) FROM data)
+[2026-06-13 16:16:44] INFO app.ai — [SQL OK] 2 rows, cols: ['Brand', 'Model', 'Year', 'Selling_Price']
+[2026-06-13 16:16:44] DEBUG app.ai — [RESULT PREVIEW]
+Brand | Model | Year | Selling_Price
+------------------------------------
+Audi | Audi RS7 2015-2019 Sportback Performance | 2016 | 8900000
+Ford | Ford Ikon 1.6 ZXI NXt | 2005 | 20000
+[2026-06-13 16:16:44] DEBUG app.ai — [LLM CALL 2] Requesting summary
+[2026-06-13 16:16:46] INFO app.ai — [SUMMARY] The costliest and cheapest cars in the dataset are:
+
+*   **Costliest Car:** A **2016 Audi RS7 Sportback Performance**, priced at **8,900,000**.
+*   **Cheapest Car:** A **2005 Ford Ikon 1.6 ZXI NXt**, 
+[2026-06-13 16:16:46] INFO app.ai — [QUERY DONE] sql=True rows=2 error=False
+[2026-06-13 16:16:59] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:17:20] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:17:48] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:18:01] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:22:14] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=gemini model=gemini-3-flash-preview question='what is the use UPDATE command in SQL'
+[2026-06-13 16:22:14] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:22:14] DEBUG app.ai — [LLM CALL 1] Sending to gemini/gemini-3-flash-preview
+[2026-06-13 16:22:17] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=False preview='The `UPDATE` command in SQL is used to **modify existing records** in a table. It allows you to change the values of specific columns for rows that meet a certain condition.
+
+### Basic Syntax:
+```sql
+'
+[2026-06-13 16:22:17] DEBUG app.ai — [FALLBACK] No JSON object found in response
+[2026-06-13 16:22:17] INFO app.ai — [NO SQL] Conversational answer: The `UPDATE` command in SQL is used to **modify existing records** in a table. It allows you to change the values of specific columns for rows that meet a certain condition.
+
+### Basic Syntax:
+```sql
+
+[2026-06-13 16:22:17] INFO app.ai — [QUERY DONE] sql=False rows=0 error=False
+[2026-06-13 16:23:11] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:23:23] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:23:36] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:24:01] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:24:34] INFO app.views — [FILE UPLOAD] Loaded sheet 'data' as table 'data' (1000 rows) for user test@user.com
+[2026-06-13 16:25:00] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:25:17] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:28:43] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:30:25] INFO app.ai — [PROVIDER] Using gemini / gemini-3-flash-preview
+[2026-06-13 16:30:49] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=gemini model=gemini-3-flash-preview question='and what is meaning of DDL'
+[2026-06-13 16:30:49] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:30:50] DEBUG app.ai — [LLM CALL 1] Sending to gemini/gemini-3-flash-preview
+[2026-06-13 16:30:52] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=False preview='**DDL** stands for **Data Definition Language**.
+
+It is a subset of SQL commands used to define, modify, and manage the **structure** of a database (the "schema") rather than the data itself. 
+
+Common'
+[2026-06-13 16:30:52] DEBUG app.ai — [FALLBACK] No JSON object found in response
+[2026-06-13 16:30:52] INFO app.ai — [NO SQL] Conversational answer: **DDL** stands for **Data Definition Language**.
+
+It is a subset of SQL commands used to define, modify, and manage the **structure** of a database (the "schema") rather than the data itself. 
+
+Common
+[2026-06-13 16:30:52] INFO app.ai — [QUERY DONE] sql=False rows=0 error=False
+[2026-06-13 16:31:30] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=gemini model=gemini-3-flash-preview question='what is DML'
+[2026-06-13 16:31:30] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:31:30] DEBUG app.ai — [LLM CALL 1] Sending to gemini/gemini-3-flash-preview
+[2026-06-13 16:31:32] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=False preview='DML stands for **Data Manipulation Language**. It is a subset of SQL commands used to manage and manipulate the data stored within a database.
+
+The most common DML commands are:
+
+*   **INSERT**: Adds '
+[2026-06-13 16:31:32] DEBUG app.ai — [FALLBACK] No JSON object found in response
+[2026-06-13 16:31:32] INFO app.ai — [NO SQL] Conversational answer: DML stands for **Data Manipulation Language**. It is a subset of SQL commands used to manage and manipulate the data stored within a database.
+
+The most common DML commands are:
+
+*   **INSERT**: Adds 
+[2026-06-13 16:31:32] INFO app.ai — [QUERY DONE] sql=False rows=0 error=False
+[2026-06-13 16:31:54] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:31:56] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=ollama model=qwen2.5-coder question='and what is DQL'
+[2026-06-13 16:31:56] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:31:56] DEBUG app.ai — [LLM CALL 1] Sending to ollama/qwen2.5-coder
+[2026-06-13 16:31:56] ERROR app.ai — [LLM CALL 1 FAILED] model "qwen2.5-coder" not found, try pulling it first (status code: 404)
+Traceback (most recent call last):
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/app/aiView.py", line 225, in run_nl_query
+    response: AIMessage = llm.invoke(messages)
+                          ^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/runnables/base.py", line 6004, in invoke
+    return self.bound.invoke(
+           ^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 476, in invoke
+    self.generate_prompt(
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1849, in generate_prompt
+    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1656, in generate
+    self._generate_with_cache(
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1994, in _generate_with_cache
+    result = self._generate(
+             ^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_ollama/chat_models.py", line 1200, in _generate
+    final_chunk = self._chat_stream_with_aggregation(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_ollama/chat_models.py", line 1135, in _chat_stream_with_aggregation
+    for chunk in self._iterate_over_stream(messages, stop, **kwargs):
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_ollama/chat_models.py", line 1224, in _iterate_over_stream
+    for stream_resp in self._create_chat_stream(messages, stop, **kwargs):
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_ollama/chat_models.py", line 1122, in _create_chat_stream
+    yield from self._client.chat(**chat_params)
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/ollama/_client.py", line 189, in inner
+    raise ResponseError(e.response.text, e.response.status_code) from None
+ollama._types.ResponseError: model "qwen2.5-coder" not found, try pulling it first (status code: 404)
+[2026-06-13 16:32:40] INFO app.views — [SETTINGS] Provider 'gemini' created for saadiqbal1921@gmail.com
+[2026-06-13 16:33:02] INFO app.views — [SETTINGS] Provider 'ollama' created for saadiqbal1921@gmail.com
+[2026-06-13 16:33:50] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=gemini model=gemini-3-flash-preview question='what does DQL stands for'
+[2026-06-13 16:33:50] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:33:51] DEBUG app.ai — [LLM CALL 1] Sending to ollama/qwen2.5-coder
+[2026-06-13 16:33:53] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=False preview='DQL stands for **Data Query Language**.
+
+In the context of SQL, it refers to the subset of commands used to retrieve data from a database. The most common and primary DQL command is **`SELECT`**, whic'
+[2026-06-13 16:33:53] DEBUG app.ai — [FALLBACK] No JSON object found in response
+[2026-06-13 16:33:53] INFO app.ai — [NO SQL] Conversational answer: DQL stands for **Data Query Language**.
+
+In the context of SQL, it refers to the subset of commands used to retrieve data from a database. The most common and primary DQL command is **`SELECT`**, whic
+[2026-06-13 16:33:53] INFO app.ai — [QUERY DONE] sql=False rows=0 error=False
+[2026-06-13 16:34:02] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=ollama model=qwen2.5-coder:3b question='what does DQL stands for'
+[2026-06-13 16:34:02] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:34:02] DEBUG app.ai — [LLM CALL 1] Sending to ollama/qwen2.5-coder
+[2026-06-13 16:34:24] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=False preview='DQL stands for Data Query Language, which is a subset of SQL used to retrieve data from databases. It includes statements like SELECT, FROM, WHERE, and JOIN to query the database.'
+[2026-06-13 16:34:24] DEBUG app.ai — [FALLBACK] No JSON object found in response
+[2026-06-13 16:34:24] INFO app.ai — [NO SQL] Conversational answer: DQL stands for Data Query Language, which is a subset of SQL used to retrieve data from databases. It includes statements like SELECT, FROM, WHERE, and JOIN to query the database.
+[2026-06-13 16:34:24] INFO app.ai — [QUERY DONE] sql=False rows=0 error=False
+[2026-06-13 16:35:45] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=gemini model=gemini-3-flash-preview question='how many Honda cars are there'
+[2026-06-13 16:35:45] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:35:45] DEBUG app.ai — [LLM CALL 1] Sending to ollama/qwen2.5-coder
+[2026-06-13 16:35:47] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=True preview=''
+[2026-06-13 16:35:47] DEBUG app.ai — [TOOL CALL] Structured. SQL: SELECT count(*) FROM data WHERE Brand = 'Honda'
+[2026-06-13 16:35:47] INFO app.ai — [EXECUTE SQL] SELECT count(*) FROM data WHERE Brand = 'Honda'
+[2026-06-13 16:35:47] INFO app.ai — [SQL OK] 1 rows, cols: ['count(*)']
+[2026-06-13 16:35:47] DEBUG app.ai — [RESULT PREVIEW]
+count(*)
+--------
+252
+[2026-06-13 16:35:47] DEBUG app.ai — [LLM CALL 2] Requesting summary
+[2026-06-13 16:35:48] INFO app.ai — [SUMMARY] There are 252 Honda cars in the dataset.
+[2026-06-13 16:35:48] INFO app.ai — [QUERY DONE] sql=True rows=1 error=False
+[2026-06-13 16:35:59] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=ollama model=qwen2.5-coder:3b question='how many Honda cars are there'
+[2026-06-13 16:35:59] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:35:59] DEBUG app.ai — [LLM CALL 1] Sending to ollama/qwen2.5-coder
+[2026-06-13 16:36:09] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=False preview='```json
+{
+  "name": "run_sql",
+  "arguments": {
+    "query": "SELECT COUNT(*) AS num_honda_cars FROM data WHERE Brand = 'Honda'"
+  }
+}
+```'
+[2026-06-13 16:36:09] WARNING app.ai — [FALLBACK] Extracted SQL from text (model skipped tool_calls): SELECT COUNT(*) AS num_honda_cars FROM data WHERE Brand = 'Honda'
+[2026-06-13 16:36:09] INFO app.ai — [EXECUTE SQL] SELECT COUNT(*) AS num_honda_cars FROM data WHERE Brand = 'Honda'
+[2026-06-13 16:36:09] INFO app.ai — [SQL OK] 1 rows, cols: ['num_honda_cars']
+[2026-06-13 16:36:09] DEBUG app.ai — [RESULT PREVIEW]
+num_honda_cars
+--------------
+252
+[2026-06-13 16:36:09] DEBUG app.ai — [LLM CALL 2] Requesting summary
+[2026-06-13 16:36:15] INFO app.ai — [SUMMARY] There are 252 Honda cars in the dataset.
+[2026-06-13 16:36:15] INFO app.ai — [QUERY DONE] sql=True rows=1 error=False
+[2026-06-13 16:43:13] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:44:43] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:47:09] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:50:25] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=gemini model=gemini-3-flash-preview question='how many BMW cars are there'
+[2026-06-13 16:50:25] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:50:26] DEBUG app.ai — [LLM CALL 1] Sending to ollama/qwen2.5-coder
+[2026-06-13 16:50:28] DEBUG app.ai — [LLM RESPONSE 1] tool_calls=True preview=''
+[2026-06-13 16:50:28] DEBUG app.ai — [TOOL CALL] Structured. SQL: SELECT count(*) FROM data WHERE Brand = 'BMW'
+[2026-06-13 16:50:28] INFO app.ai — [EXECUTE SQL] SELECT count(*) FROM data WHERE Brand = 'BMW'
+[2026-06-13 16:50:28] INFO app.ai — [SQL OK] 1 rows, cols: ['count(*)']
+[2026-06-13 16:50:28] DEBUG app.ai — [RESULT PREVIEW]
+count(*)
+--------
+39
+[2026-06-13 16:50:28] DEBUG app.ai — [LLM CALL 2] Requesting summary
+[2026-06-13 16:51:04] ERROR app.ai — [LLM CALL 2 FAILED] Error calling model 'gemini-3-flash-preview' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3-flash\nPlease retry in 55.979519694s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55s'}]}}
+Traceback (most recent call last):
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py", line 3234, in _generate
+    response: GenerateContentResponse = self.client.models.generate_content(
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/models.py", line 6480, in generate_content
+    response = self._generate_content(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/models.py", line 4916, in _generate_content
+    response = self._api_client.request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1611, in request
+    response = self._request(http_request, http_options, stream=False)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1402, in _request
+    return retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 371, in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1381, in _request_once
+    errors.APIError.raise_for_response(response)
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3-flash\nPlease retry in 55.979519694s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55s'}]}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/app/aiView.py", line 301, in run_nl_query
+    final: AIMessage = summary_llm.invoke(messages)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py", line 2701, in invoke
+    return super().invoke(input, config, stop=stop, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 476, in invoke
+    self.generate_prompt(
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1849, in generate_prompt
+    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1656, in generate
+    self._generate_with_cache(
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1994, in _generate_with_cache
+    result = self._generate(
+             ^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py", line 3238, in _generate
+    _handle_client_error(e, request)
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py", line 169, in _handle_client_error
+    raise ChatGoogleGenerativeAIError(msg) from e
+langchain_google_genai.chat_models.ChatGoogleGenerativeAIError: Error calling model 'gemini-3-flash-preview' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3-flash\nPlease retry in 55.979519694s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55s'}]}}
+[2026-06-13 16:51:04] INFO app.ai — [QUERY DONE] sql=True rows=1 error=False
+[2026-06-13 16:51:33] INFO app.ai — [QUERY START] db='Cars Dataset 1' provider=gemini model=gemini-3-flash-preview question='how many cars are there in year 2019'
+[2026-06-13 16:51:33] DEBUG app.ai — [SCHEMA] 1 tables for 'Cars Dataset 1'
+[2026-06-13 16:51:33] DEBUG app.ai — [LLM CALL 1] Sending to ollama/qwen2.5-coder
+[2026-06-13 16:52:08] ERROR app.ai — [LLM CALL 1 FAILED] Error calling model 'gemini-3-flash-preview' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3-flash\nPlease retry in 51.672963745s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '51s'}]}}
+Traceback (most recent call last):
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py", line 3234, in _generate
+    response: GenerateContentResponse = self.client.models.generate_content(
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/models.py", line 6465, in generate_content
+    return self._generate_content(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/models.py", line 4916, in _generate_content
+    response = self._api_client.request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1611, in request
+    response = self._request(http_request, http_options, stream=False)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1402, in _request
+    return retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 371, in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1381, in _request_once
+    errors.APIError.raise_for_response(response)
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/google/genai/errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3-flash\nPlease retry in 51.672963745s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '51s'}]}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/app/aiView.py", line 224, in run_nl_query
+    response: AIMessage = llm.invoke(messages)
+                          ^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/runnables/base.py", line 6004, in invoke
+    return self.bound.invoke(
+           ^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py", line 2701, in invoke
+    return super().invoke(input, config, stop=stop, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 476, in invoke
+    self.generate_prompt(
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1849, in generate_prompt
+    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1656, in generate
+    self._generate_with_cache(
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_core/language_models/chat_models.py", line 1994, in _generate_with_cache
+    result = self._generate(
+             ^^^^^^^^^^^^^^^
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py", line 3238, in _generate
+    _handle_client_error(e, request)
+  File "/media/saad/Workspace/ML & LLM/Projects/NL2SQL/.venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py", line 169, in _handle_client_error
+    raise ChatGoogleGenerativeAIError(msg) from e
+langchain_google_genai.chat_models.ChatGoogleGenerativeAIError: Error calling model 'gemini-3-flash-preview' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3-flash\nPlease retry in 51.672963745s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '51s'}]}}
+[2026-06-13 16:52:42] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:53:35] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:53:47] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:55:12] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:55:14] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:56:22] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:56:25] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 16:56:36] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder

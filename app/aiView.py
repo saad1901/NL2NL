@@ -14,16 +14,16 @@ run_nl_query(question, db, status_cb=None) -> dict
 """
 
 import json
-import logging
+# import logging
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_core.tools import tool
 
-from .models import DatabaseConnection
+from .models import DatabaseConnection, LLMModel
 from .aiTools import execute_query, fetch_schema
 from .providers.router import get_llm, get_summary_llm, LLM_PROVIDER, LLM_MODEL
 
-logger = logging.getLogger('app.ai')
+#logger = #logging.get#logger('app.ai')
 
 
 def _extract_text(content) -> str:
@@ -55,9 +55,8 @@ from langchain_core.tools import tool
 from .models import DatabaseConnection
 from .aiTools import execute_query, fetch_schema
 
-logger = logging.getLogger('app.ai')
+#logger = #logging.get#logger('app.ai')
 
-OLLAMA_MODEL = "qwen2.5-coder:3b"
 
 
 # ── Tool definition ────────────────────────────────────────────────────────────
@@ -103,7 +102,7 @@ Your job:
 Rules:
 - Only write SELECT statements. Never INSERT, UPDATE, DELETE, DROP, or any DDL.
 - Use the exact table and column names from the schema above.
-- Always SELECT all columns that are relevant to the answer — including numeric/value columns, not just name/label columns.
+- Always SELECT all columns that are relevant to the answer — including numeric/value columns.
 - Limit results to 100 rows unless the user asks for more.
 - When summarising results, highlight key numbers and insights.
 """
@@ -126,59 +125,87 @@ def _extract_tool_call_from_text(text: str) -> dict | None:
     start = cleaned.find('{')
     end   = cleaned.rfind('}')
     if start == -1 or end == -1:
-        logger.debug(f"[FALLBACK] No JSON object found in response")
+        #logger.debug(f"[FALLBACK] No JSON object found in response")
         return None
 
     try:
         obj = json.loads(cleaned[start:end + 1])
     except json.JSONDecodeError as e:
-        logger.debug(f"[FALLBACK] JSON parse failed: {e}")
+        #logger.debug(f"[FALLBACK] JSON parse failed: {e}")
         return None
 
     args  = obj.get("arguments") or obj.get("parameters") or {}
     query = args.get("query", "").strip().rstrip(';')
     if not query:
-        logger.debug(f"[FALLBACK] Parsed JSON but no 'query' field: {obj}")
+        #logger.debug(f"[FALLBACK] Parsed JSON but no 'query' field: {obj}")
         return None
 
-    logger.warning(f"[FALLBACK] Extracted SQL from text (model skipped tool_calls): {query[:200]}")
+    #logger.warning(f"[FALLBACK] Extracted SQL from text (model skipped tool_calls): {query[:200]}")
     return {"query": query, "id": "text_fallback"}
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
 
-def run_nl_query(question: str, db: DatabaseConnection, status_cb=None) -> dict:
+def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
+                 llm_model: LLMModel = None) -> dict:
     """
     Full NL→SQL→NL pipeline.
 
-    status_cb: optional callable(step: str, detail: str) called at each stage.
-      Steps emitted:
-        "thinking"    — LLM is reading the question
-        "generating"  — LLM produced a tool call, about to execute
-        "querying"    — SQL sent to database (detail = the SQL string)
-        "reading"     — rows returned (detail = "N rows")
-        "summarising" — second LLM call for plain-English answer
-        "done"        — pipeline complete
-
-    Returns dict with keys: sql, nl_response, columns, rows, error
+    llm_model: a LLMModel instance from the database (user's configured model).
+               Falls back to .env LLM_PROVIDER/LLM_MODEL if None.
     """
 
     def notify(step, detail=""):
         if status_cb:
-            try:
-                status_cb(step, detail)
-            except Exception:
-                pass
+            try: status_cb(step, detail)
+            except Exception: pass
 
-    logger.info(f"[QUERY START] db='{db.label}' (id={db.id}) question='{question}'")
+    # Resolve provider/model
+    if llm_model:
+        provider_name = llm_model.provider.provider
+        model_id      = llm_model.model_id
+        api_key       = llm_model.provider.api_key
+        base_url      = llm_model.provider.base_url
+        # #logger.info(f"[QUERY START] db='{db.label}' provider={provider_name} model={model_id} question='{question}'")
+
+        def _get_llm(tools):
+            import importlib
+            mod = importlib.import_module(f"app.providers.{provider_name}")
+            # Temporarily inject key into the module's os.environ for this call
+            import os
+            env_key_map = {
+                'gemini': 'GEMINI_API_KEY',
+                'openai': 'OPENAI_API_KEY',
+                'anthropic': 'ANTHROPIC_API_KEY',
+            }
+            if provider_name in env_key_map and api_key:
+                os.environ[env_key_map[provider_name]] = api_key
+            if provider_name == 'ollama' and base_url:
+                os.environ['OLLAMA_BASE_URL'] = base_url
+            return mod.get_llm(model_id, tools)
+
+        def _get_summary_llm():
+            import importlib, os
+            mod = importlib.import_module(f"app.providers.{provider_name}")
+            env_key_map = {'gemini':'GEMINI_API_KEY','openai':'OPENAI_API_KEY','anthropic':'ANTHROPIC_API_KEY'}
+            if provider_name in env_key_map and api_key:
+                os.environ[env_key_map[provider_name]] = api_key
+            if provider_name == 'ollama' and base_url:
+                os.environ['OLLAMA_BASE_URL'] = base_url
+            return mod.get_summary_llm(model_id)
+    else:
+        # Fallback to .env config
+        ##logger.info(f"[QUERY START] db='{db.label}' provider={LLM_PROVIDER} model={LLM_MODEL} question='{question}'")
+        _get_llm = lambda tools: get_llm(tools)
+        _get_summary_llm = get_summary_llm
 
     schema = db.fetched_schema or fetch_schema(db)
-    if schema:
-        logger.debug(f"[SCHEMA] {len(schema.splitlines())} tables for '{db.label}'")
-    else:
-        logger.warning(f"[SCHEMA] No schema for '{db.label}'")
+    # if schema:
+    #     #logger.debug(f"[SCHEMA] {len(schema.splitlines())} tables for '{db.label}'")
+    # else:
+    #     #logger.warning(f"[SCHEMA] No schema for '{db.label}'")
 
-    llm = get_llm(tools=[run_sql])
+    llm = _get_llm(tools=[run_sql])
 
     messages = [
         SystemMessage(content=_build_system_prompt(db, schema)),
@@ -192,22 +219,21 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None) -> dict:
 
     # ── Step 1: first LLM call ────────────────────────────────────────────────
     notify("thinking", "Understanding your question…")
-    logger.debug(f"[LLM CALL 1] Sending to {LLM_PROVIDER}/{LLM_MODEL}")
+    #logger.debug(f"[LLM CALL 1] Sending to {LLM_PROVIDER}/{LLM_MODEL}")
     try:
         response: AIMessage = llm.invoke(messages)
     except Exception as e:
-        logger.error(f"[LLM CALL 1 FAILED] {e}", exc_info=True)
+        #logger.error(f"[LLM CALL 1 FAILED] {e}", exc_info=True)
         notify("done")
         return {
             "sql": "", "columns": [], "rows": [], "error": str(e),
             "nl_response": (
                 "The AI model could not be reached. "
-                f"Provider: {LLM_PROVIDER}, model: {LLM_MODEL}. "
-                "Check your .env configuration and API keys."
+                "Check your RATE LIMIT, .env configuration and API keys."
             ),
         }
 
-    logger.debug(f"[LLM RESPONSE 1] tool_calls={bool(response.tool_calls)} preview='{_extract_text(response.content)[:200]}'")
+    #logger.debug(f"[LLM RESPONSE 1] tool_calls={bool(response.tool_calls)} preview='{_extract_text(response.content)[:200]}'")
     messages.append(response)
 
     # ── Step 2: resolve SQL ───────────────────────────────────────────────────
@@ -216,7 +242,7 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None) -> dict:
     if response.tool_calls:
         tc = response.tool_calls[0]
         tool_call_args = {"query": tc["args"].get("query", "").strip().rstrip(';'), "id": tc["id"]}
-        logger.debug(f"[TOOL CALL] Structured. SQL: {tool_call_args['query'][:200]}")
+        #logger.debug(f"[TOOL CALL] Structured. SQL: {tool_call_args['query'][:200]}")
     else:
         tool_call_args = _extract_tool_call_from_text(_extract_text(response.content))
 
@@ -227,7 +253,7 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None) -> dict:
         # Safety: block non-SELECT
         first_word = executed_sql.strip().split()[0].upper() if executed_sql.strip() else ""
         if first_word not in ("SELECT", "WITH", "EXPLAIN"):
-            logger.warning(f"[BLOCKED] {executed_sql[:120]}")
+            #logger.warning(f"[BLOCKED] {executed_sql[:120]}")
             notify("done")
             return {
                 "sql": executed_sql, "columns": [], "rows": [],
@@ -237,18 +263,18 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None) -> dict:
 
         # ── Step 3: execute SQL ───────────────────────────────────────────────
         notify("querying", executed_sql)
-        logger.info(f"[EXECUTE SQL] {executed_sql}")
+        #logger.info(f"[EXECUTE SQL] {executed_sql}")
         result      = execute_query(db, executed_sql)
         columns     = result["columns"]
         rows        = result["rows"]
         query_error = result["error"]
 
         if query_error:
-            logger.error(f"[SQL ERROR] {query_error}")
+            #logger.error(f"[SQL ERROR] {query_error}")
             tool_result_text = f"Error executing query: {query_error}"
         else:
             notify("reading", f"{len(rows)} row{'s' if len(rows) != 1 else ''} returned")
-            logger.info(f"[SQL OK] {len(rows)} rows, cols: {columns}")
+            #logger.info(f"[SQL OK] {len(rows)} rows, cols: {columns}")
             if not rows:
                 tool_result_text = "Query executed successfully. No rows returned."
             else:
@@ -257,7 +283,7 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None) -> dict:
                 data_lines = [" | ".join(r) for r in rows[:50]]
                 suffix     = f"\n... ({len(rows)} rows total)" if len(rows) > 50 else ""
                 tool_result_text = f"{header}\n{divider}\n" + "\n".join(data_lines) + suffix
-                logger.debug(f"[RESULT PREVIEW]\n{tool_result_text[:400]}")
+                #logger.debug(f"[RESULT PREVIEW]\n{tool_result_text[:400]}")
 
         if response.tool_calls:
             messages.append(ToolMessage(content=tool_result_text, tool_call_id=tool_call_args["id"]))
@@ -268,25 +294,25 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None) -> dict:
 
         # ── Step 4: summary LLM call ──────────────────────────────────────────
         notify("summarising", "Preparing your answer…")
-        logger.debug("[LLM CALL 2] Requesting summary")
+        #logger.debug("[LLM CALL 2] Requesting summary")
         try:
-            summary_llm = get_summary_llm()
+            summary_llm = _get_summary_llm()
             final: AIMessage = summary_llm.invoke(messages)
             nl_response = _extract_text(final.content)
-            logger.info(f"[SUMMARY] {nl_response[:200]}")
+            #logger.info(f"[SUMMARY] {nl_response[:200]}")
         except Exception as e:
-            logger.error(f"[LLM CALL 2 FAILED] {e}", exc_info=True)
+            #logger.error(f"[LLM CALL 2 FAILED] {e}", exc_info=True)
             nl_response = "Query ran successfully. See the data table below."
 
         if query_error:
             nl_response = "The query could not be completed. Please try rephrasing your question."
 
     else:
-        logger.info(f"[NO SQL] Conversational answer: {_extract_text(response.content)[:200]}")
+        #logger.info(f"[NO SQL] Conversational answer: {_extract_text(response.content)[:200]}")
         nl_response = _extract_text(response.content)
 
     notify("done")
-    logger.info(f"[QUERY DONE] sql={bool(executed_sql)} rows={len(rows)} error={bool(query_error)}")
+    #logger.info(f"[QUERY DONE] sql={bool(executed_sql)} rows={len(rows)} error={bool(query_error)}")
 
     return {
         "sql":         executed_sql,
