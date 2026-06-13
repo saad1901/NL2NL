@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — NL2SQL{% endblock %}
+{% block body %}
+<div class="min-h-screen gradient-bg flex items-center justify-center px-4">
+  <div class="text-center max-w-md">
+    <div class="w-20 h-20 rounded-2xl bg-brand-600/20 border border-brand-500/20 flex items-center justify-center mx-auto mb-6">
+      <svg class="w-10 h-10 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+      </svg>
+    </div>
+    <h2 class="text-2xl font-bold text-white mb-2">No databases yet</h2>
+    <p class="text-gray-400 text-sm mb-8">Connect your first database to start asking questions in plain English.</p>
+    <a href="/databases/add/"
+      class="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition glow">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add your first database
+    </a>
+    <div class="mt-6">
+      <a href="/logout/" class="text-xs text-gray-600 hover:text-gray-400 transition">Sign out</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

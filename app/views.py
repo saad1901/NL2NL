@@ -1,0 +1,380 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.contrib import messages
+from django.http import JsonResponse, StreamingHttpResponse
+from django.views.decorators.http import require_POST, require_http_methods
+from django.utils import timezone
+from django.conf import settings
+import json
+import logging
+import os
+import sqlite3
+
+logger = logging.getLogger('app.views')
+
+from .models import DatabaseConnection, QueryHistory
+from .aiTools import fetch_schema
+from .aiView import run_nl_query
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('/dashboard/')
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+        try:
+            username = User.objects.get(email=email).username
+        except User.DoesNotExist:
+            username = email
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('/dashboard/')
+        messages.error(request, 'Invalid email or password.')
+    return render(request, 'login.html')
+
+
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('/dashboard/')
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name  = request.POST.get('last_name', '').strip()
+        email      = request.POST.get('email', '').strip()
+        password   = request.POST.get('password', '')
+        password2  = request.POST.get('password2', '')
+
+        if not all([first_name, email, password]):
+            messages.error(request, 'Please fill in all required fields.')
+        elif password != password2:
+            messages.error(request, 'Passwords do not match.')
+        elif len(password) < 8:
+            messages.error(request, 'Password must be at least 8 characters.')
+        elif User.objects.filter(email=email).exists():
+            messages.error(request, 'An account with this email already exists.')
+        else:
+            user = User.objects.create_user(
+                username=email, email=email, password=password,
+                first_name=first_name, last_name=last_name,
+            )
+            login(request, user)
+            return redirect('/dashboard/')
+    return render(request, 'register.html')
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('/login/')
+
+
+# ── Dashboard / Chat ───────────────────────────────────────────────────────────
+
+def dashboard_view(request):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+    dbs = DatabaseConnection.objects.filter(user=request.user)
+    if dbs.exists():
+        return redirect(f'/chat/{dbs.first().id}/')
+    return render(request, 'dashboard_empty.html', {'user': request.user})
+
+
+def chat_view(request, db_id):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+    all_dbs = DatabaseConnection.objects.filter(user=request.user)
+    history = QueryHistory.objects.filter(database=db, user=request.user).order_by('created_at')
+    return render(request, 'chat.html', {
+        'user': request.user,
+        'active_db': db,
+        'all_dbs': all_dbs,
+        'history': history,
+    })
+
+
+@require_POST
+def ask_view(request, db_id):
+    """
+    SSE streaming endpoint.
+    Emits server-sent events as the pipeline progresses, then a final
+    'result' event with the full JSON payload.
+
+    Event types:
+      status  — {"step": "thinking"|"generating"|"querying"|"reading"|"summarising", "detail": "..."}
+      result  — {"id", "sql", "nl_response", "columns", "rows", "error", "created_at"}
+      error   — {"message": "..."}
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid request body.'}, status=400)
+
+    question = data.get('question', '').strip()
+    if not question:
+        return JsonResponse({'error': 'Empty question.'}, status=400)
+
+    # ── Resolve credentials for label-only databases ──────────────────────────
+    if not db.store_credentials:
+        session_creds = data.get('credentials', {})
+        if not session_creds:
+            return JsonResponse(
+                {'error': 'no_credentials',
+                 'message': 'This database requires credentials. Please enter them above.'},
+                status=400
+            )
+        db.connection_string = session_creds.get('connection_string', '')
+        db.host        = session_creds.get('host', '')
+        db.port        = session_creds.get('port', '')
+        db.db_name     = session_creds.get('db_name', '')
+        db.db_user     = session_creds.get('db_user', '')
+        db.db_password = session_creds.get('db_password', '')
+        db.use_ssl     = session_creds.get('use_ssl', False)
+        if not db.fetched_schema:
+            fetch_schema(db)
+
+    def event_stream():
+        import queue, threading
+
+        q = queue.Queue()
+
+        def status_cb(step, detail=""):
+            q.put(('status', {'step': step, 'detail': detail}))
+
+        def run():
+            try:
+                result = run_nl_query(question, db, status_cb=status_cb)
+                q.put(('result', result))
+            except Exception as e:
+                logger.error(f"[ASK VIEW] Unhandled error: {e}", exc_info=True)
+                q.put(('error', {'message': 'Something went wrong. Please try again.'}))
+
+        threading.Thread(target=run, daemon=True).start()
+
+        while True:
+            event_type, payload = q.get()
+            yield f"event: {event_type}\ndata: {json.dumps(payload)}\n\n"
+            if event_type in ('result', 'error'):
+                # Save to history on result
+                if event_type == 'result':
+                    entry = QueryHistory.objects.create(
+                        database=db,
+                        user=request.user,
+                        question=question,
+                        generated_sql=payload.get('sql', ''),
+                        nl_response=payload.get('nl_response', ''),
+                        error=payload.get('error', ''),
+                        result_columns=payload.get('columns', []),
+                        result_rows=payload.get('rows', []),
+                    )
+                    # Emit a final enriched result with DB-assigned id
+                    final = {
+                        'id':          entry.id,
+                        'question':    question,
+                        'sql':         payload.get('sql', ''),
+                        'nl_response': payload.get('nl_response', ''),
+                        'columns':     payload.get('columns', []),
+                        'rows':        payload.get('rows', []),
+                        'error':       '',
+                        'created_at':  entry.created_at.strftime('%H:%M'),
+                    }
+                    yield f"event: final\ndata: {json.dumps(final)}\n\n"
+                break
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+# ── Database Management ────────────────────────────────────────────────────────
+
+def databases_view(request):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+    dbs = DatabaseConnection.objects.filter(user=request.user)
+    return render(request, 'databases.html', {'user': request.user, 'databases': dbs})
+
+
+def add_database_view(request):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+
+    ctx = {'user': request.user, 'db_types': DatabaseConnection.DB_TYPES}
+
+    if request.method == 'POST':
+        label              = request.POST.get('label', '').strip()
+        db_type            = request.POST.get('db_type', 'postgresql')
+        store_credentials  = request.POST.get('store_credentials') == 'yes'
+        schema_description = request.POST.get('schema_description', '').strip()
+
+        if not label:
+            messages.error(request, 'Please provide a label for this database.')
+            return render(request, 'add_database.html', ctx)
+
+        if DatabaseConnection.objects.filter(user=request.user, label=label).exists():
+            messages.error(request, f'You already have a database labelled "{label}".')
+            return render(request, 'add_database.html', ctx)
+
+        db = DatabaseConnection(
+            user=request.user,
+            label=label,
+            db_type=db_type,
+            store_credentials=store_credentials,
+            schema_description=schema_description,
+        )
+
+        if store_credentials:
+            input_mode = request.POST.get('input_mode', 'string')
+            if input_mode == 'string':
+                db.connection_string = request.POST.get('connection_string', '').strip()
+            else:
+                db.host        = request.POST.get('host', '').strip()
+                db.port        = request.POST.get('port', '').strip()
+                db.db_name     = request.POST.get('db_name', '').strip()
+                db.db_user     = request.POST.get('db_user', '').strip()
+                db.db_password = request.POST.get('db_password', '').strip()
+                db.use_ssl     = request.POST.get('use_ssl') == 'on'
+
+        db.save()
+
+        # ── Fetch and store schema immediately after saving ───────────────────
+        if store_credentials:
+            schema = fetch_schema(db)
+            if schema:
+                db.fetched_schema = schema
+                db.schema_fetched_at = timezone.now()
+                db.save(update_fields=['fetched_schema', 'schema_fetched_at'])
+                messages.success(request, f'"{label}" added and schema loaded ({len(schema.splitlines())} tables).')
+            else:
+                messages.warning(
+                    request,
+                    f'"{label}" saved but schema could not be fetched. '
+                    'Check your connection details — the AI will have limited context until the schema is available.'
+                )
+        else:
+            messages.success(request, f'"{label}" added (label-only mode, no schema fetched).')
+        # ─────────────────────────────────────────────────────────────────────
+
+        return redirect(f'/chat/{db.id}/')
+
+    return render(request, 'add_database.html', ctx)
+
+
+def upload_file_db_view(request):
+    """
+    Accepts a CSV / XLS / XLSX file upload.
+    Loads each sheet (Excel) or the single table (CSV) into a dedicated
+    per-user SQLite file at:  user_data/<user_id>/<label>.db
+    Then creates a DatabaseConnection record and fetches the schema.
+    """
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+
+    ctx = {'user': request.user}
+
+    if request.method == 'POST':
+        import pandas as pd
+
+        label = request.POST.get('label', '').strip()
+        uploaded = request.FILES.get('datafile')
+
+        if not label:
+            messages.error(request, 'Please provide a label.')
+            return render(request, 'upload_file_db.html', ctx)
+
+        if not uploaded:
+            messages.error(request, 'Please select a file.')
+            return render(request, 'upload_file_db.html', ctx)
+
+        if DatabaseConnection.objects.filter(user=request.user, label=label).exists():
+            messages.error(request, f'You already have a database labelled "{label}".')
+            return render(request, 'upload_file_db.html', ctx)
+
+        ext = os.path.splitext(uploaded.name)[1].lower()
+        if ext not in ('.csv', '.xls', '.xlsx'):
+            messages.error(request, 'Only CSV, XLS and XLSX files are supported.')
+            return render(request, 'upload_file_db.html', ctx)
+
+        # ── Build destination SQLite path ─────────────────────────────────────
+        user_dir = os.path.join(settings.BASE_DIR, 'user_data', str(request.user.id))
+        os.makedirs(user_dir, exist_ok=True)
+        safe_label = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in label)
+        sqlite_file = os.path.join(user_dir, f"{safe_label}.db")
+
+        # ── Parse file and load into SQLite ───────────────────────────────────
+        try:
+            if ext == '.csv':
+                sheets = {'data': pd.read_csv(uploaded)}
+            else:
+                xf = pd.ExcelFile(uploaded)
+                sheets = {sheet: xf.parse(sheet) for sheet in xf.sheet_names}
+
+            conn_sqlite = sqlite3.connect(sqlite_file)
+            tables_loaded = []
+            for sheet_name, df in sheets.items():
+                # Clean column names — replace spaces/special chars with underscores
+                df.columns = [
+                    "".join(c if c.isalnum() or c == '_' else '_' for c in str(col)).strip('_')
+                    for col in df.columns
+                ]
+                table_name = "".join(c if c.isalnum() or c == '_' else '_' for c in sheet_name).strip('_') or 'sheet'
+                df.to_sql(table_name, conn_sqlite, if_exists='replace', index=False)
+                tables_loaded.append(f"{table_name} ({len(df)} rows)")
+                logger.info(f"[FILE UPLOAD] Loaded sheet '{sheet_name}' as table '{table_name}' ({len(df)} rows) for user {request.user.email}")
+            conn_sqlite.close()
+
+        except Exception as e:
+            logger.error(f"[FILE UPLOAD FAILED] user={request.user.email} file={uploaded.name} error={e}", exc_info=True)
+            messages.error(request, f'Failed to parse the file: {e}')
+            return render(request, 'upload_file_db.html', ctx)
+
+        # ── Create DatabaseConnection record ──────────────────────────────────
+        db = DatabaseConnection.objects.create(
+            user=request.user,
+            label=label,
+            db_type='sqlite',
+            store_credentials=True,
+            is_file_based=True,
+            sqlite_path=sqlite_file,
+            schema_description=f"Imported from {uploaded.name}",
+        )
+
+        # Fetch and store schema
+        from .aiTools import fetch_schema
+        schema = fetch_schema(db)
+        if schema:
+            db.fetched_schema = schema
+            db.schema_fetched_at = timezone.now()
+            db.save(update_fields=['fetched_schema', 'schema_fetched_at'])
+
+        messages.success(request, f'"{label}" created from {uploaded.name} — {", ".join(tables_loaded)}.')
+        return redirect(f'/chat/{db.id}/')
+
+    return render(request, 'upload_file_db.html', ctx)
+
+
+def clear_history_view(request, db_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+    deleted_count, _ = QueryHistory.objects.filter(database=db, user=request.user).delete()
+    logger.info(f"[CLEAR HISTORY] db='{db.label}' user='{request.user.email}' deleted={deleted_count} entries")  # noqa
+    return JsonResponse({'cleared': deleted_count})
+
+
+def delete_database_view(request, db_id):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+    db.delete()
+    messages.success(request, 'Database removed.')
+    return redirect('/databases/')

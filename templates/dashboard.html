@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — NL2SQL{% endblock %}
+
+{% block extra_head %}
+<style>
+  .chat-bubble-user {
+    background: linear-gradient(135deg, #4c6ef5, #7c3aed);
+  }
+  .chat-bubble-ai {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .typing-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #5c7cfa;
+    animation: typingBounce 1.2s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40% { transform: translateY(-6px); opacity: 1; }
+  }
+  .sql-block {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 12px 16px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .result-table th { color: #6b7280; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .result-table td { font-size: 0.82rem; }
+  .result-table tr:hover td { background: rgba(92,124,250,0.05); }
+  textarea { font-family: 'Inter', sans-serif; }
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="flex h-screen overflow-hidden bg-gray-950">
+
+  <!-- ── Sidebar ── -->
+  <aside class="w-60 flex-shrink-0 flex flex-col border-r border-white/5 bg-gray-900/60">
+    <div class="flex items-center gap-3 px-5 py-5 border-b border-white/5">
+      <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center flex-shrink-0">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <span class="text-lg font-bold text-white">NL<span class="text-brand-400">2</span>SQL</span>
+    </div>
+
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
+      <a href="/dashboard/" class="sidebar-item active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-200">
+        <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+        Ask a Question
+      </a>
+      <a href="/databases/" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/>
+        </svg>
+        My Databases
+      </a>
+      <a href="/history/" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:text-gray-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        History
+      </a>
+
+      <div class="border-t border-white/5 my-3"></div>
+      <p class="text-xs text-gray-600 uppercase tracking-wider px-3 mb-2">Recent</p>
+
+      <button class="sidebar-item w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-300">
+        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+        <span class="truncate">Top customers last quarter</span>
+      </button>
+      <button class="sidebar-item w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-300">
+        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+        <span class="truncate">Pending orders this week</span>
+      </button>
+      <button class="sidebar-item w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-300">
+        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+        <span class="truncate">Monthly revenue breakdown</span>
+      </button>
+    </nav>
+
+    <!-- User -->
+    <div class="border-t border-white/5 px-4 py-3">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+          {{ user.first_name.0|default:"U" }}{{ user.last_name.0|default:"" }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-200 truncate">{{ user.get_full_name|default:user.username }}</p>
+          <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
+        </div>
+        <a href="/logout/" class="text-gray-500 hover:text-gray-300 transition" title="Sign out">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Chat Area ── -->
+  <main class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Top bar with DB selector -->
+    <header class="flex items-center justify-between px-6 py-3.5 border-b border-white/5 bg-gray-900/40 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-gray-400">Querying:</span>
+        <div class="relative">
+          <button onclick="toggleDbMenu()" id="dbPickerBtn"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition text-sm">
+            <div class="w-2 h-2 rounded-full bg-green-400"></div>
+            <span id="selectedDbName" class="text-gray-200 font-medium">production_db</span>
+            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <!-- Dropdown -->
+          <div id="dbMenu" class="hidden absolute top-full left-0 mt-1 w-56 glass rounded-xl shadow-2xl z-50 py-1">
+            <button onclick="selectDb('production_db', 'connected')" class="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/5 text-sm text-gray-200 transition">
+              <div class="w-2 h-2 rounded-full bg-green-400"></div>production_db
+            </button>
+            <button onclick="selectDb('analytics_dw', 'connected')" class="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/5 text-sm text-gray-200 transition">
+              <div class="w-2 h-2 rounded-full bg-green-400"></div>analytics_dw
+            </button>
+            <button onclick="selectDb('staging_db', 'disconnected')" class="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/5 text-sm text-gray-400 transition">
+              <div class="w-2 h-2 rounded-full bg-red-400"></div>staging_db <span class="ml-auto text-xs text-red-400">offline</span>
+            </button>
+            <div class="border-t border-white/5 mt-1 pt-1">
+              <a href="/databases/add/" class="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/5 text-sm text-brand-400 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add new database
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Developer mode toggle -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-500">Developer mode</span>
+        <button onclick="toggleDevMode()" id="devToggle"
+          class="relative w-9 h-5 rounded-full bg-white/10 border border-white/10 transition-colors duration-200"
+          role="switch" aria-checked="false">
+          <span id="devToggleThumb"
+            class="absolute left-0.5 top-0.5 w-4 h-4 rounded-full bg-gray-400 transition-transform duration-200"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat messages -->
+    <div id="chatArea" class="flex-1 overflow-y-auto scrollbar-thin px-6 py-6 space-y-6">
+
+      <!-- Welcome state (shown when no messages) -->
+      <div id="welcomeScreen" class="flex flex-col items-center justify-center h-full text-center py-12">
+        <div class="w-16 h-16 rounded-2xl bg-brand-600/20 border border-brand-500/20 flex items-center justify-center mb-4">
+          <svg class="w-8 h-8 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold text-white mb-2">Ask anything about your data</h2>
+        <p class="text-gray-500 text-sm max-w-sm">No SQL needed. Just type your question in plain English and get a clear answer instantly.</p>
+
+        <!-- Suggestion chips -->
+        <div class="flex flex-wrap justify-center gap-2 mt-6">
+          <button onclick="useExample(this)" class="example-chip px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 text-gray-300 hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-white transition">
+            Who are our top 10 customers by revenue?
+          </button>
+          <button onclick="useExample(this)" class="example-chip px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 text-gray-300 hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-white transition">
+            How many orders are pending this week?
+          </button>
+          <button onclick="useExample(this)" class="example-chip px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 text-gray-300 hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-white transition">
+            What was last month's total revenue?
+          </button>
+          <button onclick="useExample(this)" class="example-chip px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 text-gray-300 hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-white transition">
+            Show me products with low stock
+          </button>
+          <button onclick="useExample(this)" class="example-chip px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 text-gray-300 hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-white transition">
+            Which sales rep closed the most deals?
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages get injected here by JS -->
+      <div id="messagesContainer" class="space-y-6"></div>
+
+    </div>
+
+    <!-- Input bar -->
+    <div class="flex-shrink-0 px-6 pb-6 pt-3">
+      <div class="glass rounded-2xl px-4 py-3 glow-sm">
+        <textarea id="questionInput" rows="1"
+          placeholder="Ask a question about your data..."
+          onkeydown="handleKey(event)" oninput="autoResize(this)"
+          class="w-full bg-transparent text-gray-100 placeholder-gray-600 text-sm leading-relaxed
+                 focus:outline-none resize-none max-h-32 overflow-y-auto scrollbar-thin"></textarea>
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+          <span class="text-xs text-gray-600">Press <kbd class="px-1 py-0.5 rounded bg-white/5 border border-white/10 text-gray-500">Enter</kbd> to send &nbsp;·&nbsp; <kbd class="px-1 py-0.5 rounded bg-white/5 border border-white/10 text-gray-500">Shift+Enter</kbd> for new line</span>
+          <button onclick="sendQuestion()"
+            id="sendBtn"
+            class="flex items-center gap-2 px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium
+                   rounded-lg transition transform hover:scale-[1.02] glow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+            </svg>
+            Ask
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── State ──
+let devMode = false;
+let isLoading = false;
+
+// Dummy response data keyed by rough intent
+const DUMMY_RESPONSES = {
+  default: {
+    summary: "Here's what I found in your database.",
+    insight: "Based on the data in <strong>production_db</strong>, here is the answer to your question.",
+    rows: [],
+    sql: "SELECT * FROM your_table LIMIT 10;"
+  },
+  customers: {
+    summary: "Your top 10 customers by revenue this quarter are listed below.",
+    insight: "Acme Corporation leads with <strong>$142,800</strong> in revenue, followed by TechFlow Inc. at <strong>$98,450</strong>. Together, your top 3 customers account for <strong>54%</strong> of total quarterly revenue.",
+    columns: ["Customer", "Email", "Revenue"],
+    rows: [
+      ["Acme Corporation", "billing@acme.com", "$142,800"],
+      ["TechFlow Inc.", "accounts@techflow.io", "$98,450"],
+      ["GlobalRetail Ltd.", "finance@globalretail.com", "$87,320"],
+      ["Innovate Solutions", "pay@innovate.co", "$65,100"],
+      ["BlueWave Digital", "hello@bluewave.digital", "$54,200"],
+    ],
+    sql: `SELECT c.name, c.email,\n  SUM(o.total_amount) AS revenue\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nWHERE o.status = 'completed'\nGROUP BY c.customer_id\nORDER BY revenue DESC\nLIMIT 10;`
+  },
+  orders: {
+    summary: "There are 47 pending orders this week.",
+    insight: "You have <strong>47 orders</strong> currently pending approval this week, with a combined value of <strong>$23,410</strong>. 12 of them have been waiting for more than 48 hours.",
+    columns: ["Order ID", "Customer", "Amount", "Waiting"],
+    rows: [
+      ["#ORD-9921", "Acme Corporation", "$4,200", "72 hrs"],
+      ["#ORD-9918", "TechFlow Inc.", "$1,850", "60 hrs"],
+      ["#ORD-9905", "BlueWave Digital", "$3,100", "51 hrs"],
+      ["#ORD-9899", "Innovate Solutions", "$780", "48 hrs"],
+    ],
+    sql: `SELECT order_id, customer_id, total_amount,\n  TIMESTAMPDIFF(HOUR, created_at, NOW()) AS waiting_hours\nFROM orders\nWHERE status = 'pending'\n  AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)\nORDER BY created_at ASC;`
+  },
+  revenue: {
+    summary: "Total revenue last month was $486,200.",
+    insight: "Last month's total revenue was <strong>$486,200</strong>, which is <strong>up 8.3%</strong> compared to the previous month ($449,100). The biggest contributor was the Enterprise segment at $312,000.",
+    columns: ["Segment", "Revenue", "vs Last Month"],
+    rows: [
+      ["Enterprise", "$312,000", "+11.2%"],
+      ["Mid-market", "$124,000", "+4.1%"],
+      ["SMB", "$50,200", "+2.8%"],
+    ],
+    sql: `SELECT segment,\n  SUM(total_amount) AS revenue,\n  ROUND((SUM(total_amount) - LAG(SUM(total_amount)) OVER (ORDER BY MONTH(created_at))) / LAG(SUM(total_amount)) OVER (ORDER BY MONTH(created_at)) * 100, 1) AS change_pct\nFROM orders\nWHERE MONTH(created_at) = MONTH(NOW()) - 1\nGROUP BY segment;`
+  },
+  stock: {
+    summary: "8 products are running low on stock.",
+    insight: "There are <strong>8 products</strong> with stock levels below the reorder threshold. 3 of them are completely out of stock and need immediate attention.",
+    columns: ["Product", "Category", "Stock", "Status"],
+    rows: [
+      ["Wireless Headphones Pro", "Electronics", "0", "Out of stock"],
+      ["Office Chair Deluxe", "Furniture", "3", "Critical"],
+      ["USB-C Hub 7-in-1", "Electronics", "5", "Low"],
+      ["Standing Desk Mat", "Accessories", "8", "Low"],
+    ],
+    sql: `SELECT name, category, stock_quantity,\n  CASE WHEN stock_quantity = 0 THEN 'Out of stock'\n       WHEN stock_quantity < 10 THEN 'Low' END AS status\nFROM products\nWHERE stock_quantity < reorder_threshold\nORDER BY stock_quantity ASC;`
+  },
+  sales: {
+    summary: "Sarah Johnson closed the most deals last month.",
+    insight: "<strong>Sarah Johnson</strong> led the sales team with <strong>34 deals closed</strong> and <strong>$218,000</strong> in revenue last month — 22% above her quota. She's followed by Marcus Lee at 28 deals.",
+    columns: ["Sales Rep", "Deals Closed", "Revenue", "vs Quota"],
+    rows: [
+      ["Sarah Johnson", "34", "$218,000", "+22%"],
+      ["Marcus Lee", "28", "$174,000", "+9%"],
+      ["Priya Patel", "21", "$143,500", "+3%"],
+      ["James Wright", "19", "$98,200", "-5%"],
+    ],
+    sql: `SELECT u.full_name, COUNT(d.id) AS deals_closed,\n  SUM(d.value) AS revenue\nFROM deals d\nJOIN users u ON d.owner_id = u.id\nWHERE d.closed_at >= DATE_FORMAT(NOW(),'%Y-%m-01') - INTERVAL 1 MONTH\n  AND d.status = 'won'\nGROUP BY u.id\nORDER BY revenue DESC;`
+  }
+};
+
+function pickResponse(question) {
+  const q = question.toLowerCase();
+  if (q.includes('customer') || q.includes('client')) return DUMMY_RESPONSES.customers;
+  if (q.includes('order') || q.includes('pending')) return DUMMY_RESPONSES.orders;
+  if (q.includes('revenue') || q.includes('sales') && q.includes('month')) return DUMMY_RESPONSES.revenue;
+  if (q.includes('stock') || q.includes('inventory') || q.includes('product')) return DUMMY_RESPONSES.stock;
+  if (q.includes('sales rep') || q.includes('deal') || q.includes('closed')) return DUMMY_RESPONSES.sales;
+  return { ...DUMMY_RESPONSES.revenue, summary: "Here's what I found.", insight: "I found the relevant data in your database. Here's a summary of the results." };
+}
+
+// ── UI helpers ──
+function toggleDbMenu() {
+  document.getElementById('dbMenu').classList.toggle('hidden');
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('dbPickerBtn').contains(e.target))
+    document.getElementById('dbMenu').classList.add('hidden');
+});
+
+function selectDb(name, status) {
+  document.getElementById('selectedDbName').textContent = name;
+  document.getElementById('dbMenu').classList.add('hidden');
+}
+
+function toggleDevMode() {
+  devMode = !devMode;
+  const toggle = document.getElementById('devToggle');
+  const thumb = document.getElementById('devToggleThumb');
+  toggle.setAttribute('aria-checked', devMode);
+  if (devMode) {
+    toggle.classList.replace('bg-white/10', 'bg-brand-600');
+    thumb.classList.add('translate-x-4');
+    thumb.classList.replace('bg-gray-400', 'bg-white');
+    // show all sql blocks
+    document.querySelectorAll('.sql-section').forEach(el => el.classList.remove('hidden'));
+  } else {
+    toggle.classList.replace('bg-brand-600', 'bg-white/10');
+    thumb.classList.remove('translate-x-4');
+    thumb.classList.replace('bg-white', 'bg-gray-400');
+    document.querySelectorAll('.sql-section').forEach(el => el.classList.add('hidden'));
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendQuestion();
+  }
+}
+
+function useExample(btn) {
+  const input = document.getElementById('questionInput');
+  input.value = btn.textContent.trim();
+  autoResize(input);
+  input.focus();
+}
+
+// ── Core send/render ──
+function sendQuestion() {
+  const input = document.getElementById('questionInput');
+  const question = input.value.trim();
+  if (!question || isLoading) return;
+
+  hideWelcome();
+  appendUserBubble(question);
+  input.value = '';
+  input.style.height = 'auto';
+  showTyping();
+  isLoading = true;
+
+  setTimeout(() => {
+    removeTyping();
+    const data = pickResponse(question);
+    appendAiBubble(question, data);
+    isLoading = false;
+    scrollToBottom();
+  }, 1400 + Math.random() * 600);
+
+  scrollToBottom();
+}
+
+function hideWelcome() {
+  const w = document.getElementById('welcomeScreen');
+  if (w) w.style.display = 'none';
+}
+
+function scrollToBottom() {
+  const area = document.getElementById('chatArea');
+  setTimeout(() => { area.scrollTop = area.scrollHeight; }, 50);
+}
+
+function appendUserBubble(text) {
+  const c = document.getElementById('messagesContainer');
+  const div = document.createElement('div');
+  div.className = 'flex justify-end fade-in';
+  div.innerHTML = `
+    <div class="max-w-lg">
+      <div class="chat-bubble-user rounded-2xl rounded-br-sm px-4 py-3 text-sm text-white leading-relaxed">
+        ${escHtml(text)}
+      </div>
+    </div>`;
+  c.appendChild(div);
+}
+
+function showTyping() {
+  const c = document.getElementById('messagesContainer');
+  const div = document.createElement('div');
+  div.id = 'typingIndicator';
+  div.className = 'flex items-start gap-3 fade-in';
+  div.innerHTML = `
+    <div class="w-8 h-8 rounded-full bg-brand-600/30 flex items-center justify-center flex-shrink-0">
+      <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+      </svg>
+    </div>
+    <div class="chat-bubble-ai rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>`;
+  c.appendChild(div);
+  scrollToBottom();
+}
+
+function removeTyping() {
+  const t = document.getElementById('typingIndicator');
+  if (t) t.remove();
+}
+
+function appendAiBubble(question, data) {
+  const c = document.getElementById('messagesContainer');
+  const div = document.createElement('div');
+  div.className = 'flex items-start gap-3 fade-in';
+
+  const tableHtml = buildTable(data);
+  const sqlHtml   = buildSql(data.sql);
+  const db        = document.getElementById('selectedDbName').textContent;
+
+  div.innerHTML = `
+    <div class="w-8 h-8 rounded-full bg-brand-600/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+      <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+      </svg>
+    </div>
+    <div class="flex-1 max-w-2xl space-y-3">
+
+      <!-- Summary sentence -->
+      <div class="chat-bubble-ai rounded-2xl rounded-tl-sm px-4 py-3.5 space-y-2">
+        <p class="text-sm text-gray-200 leading-relaxed">${data.insight}</p>
+        <div class="flex items-center gap-1.5 pt-1">
+          <div class="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+          <span class="text-xs text-gray-600">from ${db}</span>
+        </div>
+      </div>
+
+      <!-- Data table -->
+      ${tableHtml}
+
+      <!-- SQL (dev mode only) -->
+      ${sqlHtml}
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2">
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-300 hover:bg-white/5 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Export CSV
+        </button>
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-300 hover:bg-white/5 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+          </svg>
+          Save query
+        </button>
+        <button onclick="toggleSqlInBubble(this)" class="sql-toggle flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-brand-400 hover:bg-brand-500/5 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+          </svg>
+          View SQL
+        </button>
+      </div>
+
+    </div>`;
+
+  c.appendChild(div);
+}
+
+function buildTable(data) {
+  if (!data.rows || !data.rows.length) return '';
+  const cols = data.columns || [];
+  const headerHtml = cols.map(c => `<th class="text-left px-4 py-2.5">${escHtml(c)}</th>`).join('');
+  const rowsHtml = data.rows.map(row => {
+    const cells = row.map((cell, i) => {
+      let cls = 'px-4 py-2.5 text-gray-300';
+      // last col often a number/money — right align
+      if (i === row.length - 1 && /^\$|^\+|-\d|^\d/.test(cell)) cls += ' text-right font-mono text-green-400';
+      return `<td class="${cls}">${escHtml(cell)}</td>`;
+    }).join('');
+    return `<tr class="border-t border-white/5 transition">${cells}</tr>`;
+  }).join('');
+  return `
+    <div class="rounded-xl overflow-hidden border border-white/8 bg-white/2">
+      <table class="result-table w-full">
+        <thead><tr class="bg-white/3">${headerHtml}</tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+function buildSql(sql) {
+  if (!sql) return '';
+  const hidden = devMode ? '' : 'hidden';
+  return `<div class="sql-section ${hidden}">
+    <div class="sql-block text-gray-300">${escHtml(sql)}</div>
+  </div>`;
+}
+
+function toggleSqlInBubble(btn) {
+  const bubble = btn.closest('.flex-1');
+  const sqlSection = bubble.querySelector('.sql-section');
+  if (!sqlSection) return;
+  sqlSection.classList.toggle('hidden');
+  btn.classList.toggle('text-brand-400');
+  btn.querySelector('svg').style.strokeWidth = sqlSection.classList.contains('hidden') ? '2' : '2.5';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+{% endblock %}

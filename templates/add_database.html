@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% block title %}Add Database — NL2SQL{% endblock %}
+
+{% block extra_head %}
+<style>
+  .db-type-btn { transition: all .15s ease; }
+  .db-type-btn.selected { border-color: rgba(92,124,250,.5); background: rgba(92,124,250,.1); }
+  .tab-btn { transition: all .15s ease; }
+  .tab-btn.active { background: rgba(92,124,250,.12); border-bottom: 2px solid #5c7cfa; color: white; }
+  .cred-option { transition: all .15s ease; border: 2px solid transparent; }
+  .cred-option.selected { border-color: rgba(92,124,250,.5); background: rgba(92,124,250,.08); }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="min-h-screen gradient-bg flex flex-col">
+
+  <!-- Top bar -->
+  <header class="flex items-center gap-3 px-6 py-4 border-b border-white/5 bg-black/20">
+    <a href="{% if request.user.is_authenticated %}/databases/{% else %}/login/{% endif %}"
+      class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-400 hover:text-gray-200 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <div class="flex items-center gap-2">
+      <div class="w-6 h-6 rounded bg-brand-600 flex items-center justify-center">
+        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <span class="font-bold text-white">NL<span class="text-brand-400">2</span>SQL</span>
+    </div>
+    <span class="text-gray-600 mx-1">/</span>
+    <span class="text-sm text-gray-300">Add Database</span>
+  </header>
+
+  <div class="flex-1 flex items-start justify-center px-4 py-10">
+    <div class="w-full max-w-xl space-y-5">
+
+      <div>
+        <h1 class="text-2xl font-bold text-white">Connect a database</h1>
+        <p class="text-gray-400 text-sm mt-1">Give it a label you'll recognise, then provide the connection details.</p>
+      </div>
+
+      <!-- Source selector -->
+      <div class="grid grid-cols-2 gap-3">
+        <a href="/databases/add/"
+          class="flex items-center gap-3 p-4 rounded-2xl border-2 border-brand-500/50 bg-brand-500/8 transition">
+          <div class="w-9 h-9 rounded-xl bg-brand-500/20 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">SQL Database</p>
+            <p class="text-xs text-gray-500">PostgreSQL, MySQL, SQLite…</p>
+          </div>
+        </a>
+        <a href="/databases/upload/"
+          class="flex items-center gap-3 p-4 rounded-2xl border-2 border-white/10 bg-white/3 hover:border-brand-500/30 hover:bg-brand-500/5 transition">
+          <div class="w-9 h-9 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">Upload File</p>
+            <p class="text-xs text-gray-500">CSV, XLS, XLSX</p>
+          </div>
+        </a>
+      </div>
+
+      {% if messages %}
+        {% for message in messages %}
+        <div class="flex items-center gap-2 px-4 py-3 rounded-xl
+          {% if message.tags == 'error' %}bg-red-500/10 border border-red-500/20 text-red-400
+          {% else %}bg-green-500/10 border border-green-500/20 text-green-400{% endif %} text-sm">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ message }}
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" action="/databases/add/" class="space-y-5">
+        {% csrf_token %}
+        <input type="hidden" name="db_type" id="db_type_hidden" value="postgresql" />
+        <input type="hidden" name="input_mode" id="input_mode_hidden" value="string" />
+
+        <!-- Label -->
+        <div class="glass rounded-2xl p-5">
+          <label class="block text-sm font-medium text-gray-300 mb-1.5">
+            Database Label <span class="text-brand-400">*</span>
+          </label>
+          <input type="text" name="label" placeholder="e.g. Production, Analytics, Staging"
+            required autofocus
+            class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500
+                   focus:outline-none focus:ring-2 focus:ring-brand-500 transition" />
+          <p class="text-xs text-gray-600 mt-1.5">This label will appear as a tab in the chat interface.</p>
+        </div>
+
+        <!-- DB Type -->
+        <div class="glass rounded-2xl p-5">
+          <label class="block text-sm font-medium text-gray-300 mb-3">Database Type</label>
+          <div class="grid grid-cols-4 gap-2">
+            {% for val, label in db_types %}
+            <button type="button" onclick="selectType('{{ val }}')"
+              id="btn_{{ val }}"
+              class="db-type-btn flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 bg-white/3 hover:bg-white/8 {% if forloop.first %}selected{% endif %}">
+              <div class="w-7 h-7 rounded-lg
+                {% if val == 'postgresql' %}bg-blue-500/20{% elif val == 'mysql' %}bg-orange-500/20{% elif val == 'mssql' %}bg-red-500/20{% else %}bg-green-500/20{% endif %}
+                flex items-center justify-center">
+                <svg class="w-3.5 h-3.5
+                  {% if val == 'postgresql' %}text-blue-400{% elif val == 'mysql' %}text-orange-400{% elif val == 'mssql' %}text-red-400{% else %}text-green-400{% endif %}"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/>
+                </svg>
+              </div>
+              <span class="text-xs font-medium text-gray-300">{{ label }}</span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Credential storage choice -->
+        <div class="glass rounded-2xl p-5">
+          <label class="block text-sm font-medium text-gray-300 mb-3">Credential Storage</label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" onclick="setCredMode('yes')" id="cred_yes"
+              class="cred-option selected rounded-xl p-4 text-left hover:bg-white/5 transition">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-7 h-7 rounded-lg bg-brand-500/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-white">Store credentials</span>
+              </div>
+              <p class="text-xs text-gray-500">Save connection details so you can query without re-entering them each time.</p>
+            </button>
+            <button type="button" onclick="setCredMode('no')" id="cred_no"
+              class="cred-option rounded-xl p-4 text-left hover:bg-white/5 transition">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-7 h-7 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-white">Label only</span>
+              </div>
+              <p class="text-xs text-gray-500">Only save the label. You'll provide credentials each time you connect.</p>
+            </button>
+          </div>
+          <input type="hidden" name="store_credentials" id="store_credentials_val" value="yes" />
+        </div>
+
+        <!-- Connection details (hidden when label-only) -->
+        <div id="connectionSection" class="glass rounded-2xl overflow-hidden">
+          <!-- Tabs: string vs fields -->
+          <div class="flex border-b border-white/5">
+            <button type="button" onclick="switchInputMode('string')" id="tab_string"
+              class="tab-btn active flex-1 py-3 text-sm font-medium text-gray-200 transition">
+              Connection String
+            </button>
+            <button type="button" onclick="switchInputMode('fields')" id="tab_fields"
+              class="tab-btn flex-1 py-3 text-sm font-medium text-gray-400 transition">
+              Host / Port / Credentials
+            </button>
+          </div>
+
+          <!-- Connection string -->
+          <div id="form_string" class="p-5 space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">Connection String</label>
+              <div class="relative">
+                <input type="text" name="connection_string" id="connStr"
+                  placeholder="postgresql://user:password@host:5432/dbname"
+                  class="w-full px-4 py-3 pr-10 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500
+                         font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition" />
+                <button type="button" onclick="togglePwd('connStr')"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Individual fields -->
+          <div id="form_fields" class="p-5 space-y-4 hidden">
+            <div class="grid grid-cols-3 gap-3">
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Host</label>
+                <input type="text" name="host" placeholder="localhost or IP"
+                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-brand-500 transition" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Port</label>
+                <input type="number" name="port" id="port_input" placeholder="5432"
+                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-brand-500 transition" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1.5">Database Name</label>
+              <input type="text" name="db_name" placeholder="my_database"
+                class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500
+                       focus:outline-none focus:ring-2 focus:ring-brand-500 transition" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Username</label>
+                <input type="text" name="db_user" placeholder="db_user"
+                  class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-brand-500 transition" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
+                <div class="relative">
+                  <input type="password" name="db_password" id="db_password" placeholder="••••••••"
+                    class="w-full px-4 py-3 pr-10 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500
+                           focus:outline-none focus:ring-2 focus:ring-brand-500 transition" />
+                  <button type="button" onclick="togglePwd('db_password')"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="checkbox" name="use_ssl" id="use_ssl" class="w-4 h-4 rounded accent-brand-500" />
+              <label for="use_ssl" class="text-sm text-gray-400">Use SSL / TLS</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schema description -->
+        <div class="glass rounded-2xl p-5">
+          <label class="block text-sm font-medium text-gray-300 mb-1.5">
+            Schema Description <span class="text-gray-600 font-normal">(optional)</span>
+          </label>
+          <textarea name="schema_description" rows="3"
+            placeholder="Briefly describe what this database contains — tables, purpose, etc. Helps the AI generate better queries."
+            class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-brand-500 transition resize-none"></textarea>
+        </div>
+
+        <button type="submit"
+          class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition glow-sm">
+          Add Database
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_PORTS = { postgresql:'5432', mysql:'3306', mssql:'1433', sqlite:'' };
+
+function selectType(val) {
+  document.getElementById('db_type_hidden').value = val;
+  document.querySelectorAll('.db-type-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('btn_' + val).classList.add('selected');
+  const portEl = document.getElementById('port_input');
+  if (portEl) portEl.placeholder = DEFAULT_PORTS[val] || '';
+}
+
+function setCredMode(mode) {
+  document.getElementById('store_credentials_val').value = mode;
+  document.getElementById('cred_yes').classList.toggle('selected', mode === 'yes');
+  document.getElementById('cred_no').classList.toggle('selected', mode === 'no');
+  document.getElementById('connectionSection').style.display = mode === 'yes' ? '' : 'none';
+}
+
+function switchInputMode(mode) {
+  document.getElementById('input_mode_hidden').value = mode;
+  document.getElementById('form_string').classList.toggle('hidden', mode !== 'string');
+  document.getElementById('form_fields').classList.toggle('hidden', mode !== 'fields');
+  document.getElementById('tab_string').classList.toggle('active', mode === 'string');
+  document.getElementById('tab_string').classList.toggle('text-gray-400', mode !== 'string');
+  document.getElementById('tab_fields').classList.toggle('active', mode === 'fields');
+  document.getElementById('tab_fields').classList.toggle('text-gray-400', mode !== 'fields');
+}
+
+function togglePwd(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+</script>
+{% endblock %}

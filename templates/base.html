@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}NL2SQL — Talk to your Database{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#f0f4ff',
+              100: '#dbe4ff',
+              200: '#bac8ff',
+              300: '#91a7ff',
+              400: '#748ffc',
+              500: '#5c7cfa',
+              600: '#4c6ef5',
+              700: '#4263eb',
+              800: '#3b5bdb',
+              900: '#364fc7',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Apply saved theme before render to avoid flash -->
+  <script>
+    (function() {
+      const t = localStorage.getItem('nl2sql_theme') || 'dark';
+      document.documentElement.classList.toggle('dark', t === 'dark');
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Dark theme */
+    .dark .gradient-bg  { background: linear-gradient(135deg, #0f0c29, #1a1a3e, #0f3460); }
+    .dark .glass        { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+    .dark .app-bg       { background: #030712; }
+    .dark .sidebar-bg   { background: rgba(17,24,39,0.6); }
+    .dark .header-bg    { background: rgba(17,24,39,0.4); }
+    .dark .chat-input-bg{ background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+    .dark .text-main    { color: #f3f4f6; }
+    .dark .text-muted   { color: #6b7280; }
+    .dark .border-subtle{ border-color: rgba(255,255,255,0.05); }
+    .dark .modal-bg     { background: #111827; border: 1px solid rgba(255,255,255,0.08); }
+    .dark .input-field  { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f3f4f6; }
+    .dark .input-field::placeholder { color: #4b5563; }
+
+    /* Light theme */
+    html:not(.dark) .gradient-bg  { background: linear-gradient(135deg, #e0e7ff, #f0f4ff, #dbeafe); }
+    html:not(.dark) .glass        { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(99,102,241,0.15); }
+    html:not(.dark) .app-bg       { background: #f8fafc; }
+    html:not(.dark) .sidebar-bg   { background: rgba(255,255,255,0.8); }
+    html:not(.dark) .header-bg    { background: rgba(255,255,255,0.9); }
+    html:not(.dark) .chat-input-bg{ background: #fff; border: 1px solid #e2e8f0; }
+    html:not(.dark) .text-main    { color: #111827; }
+    html:not(.dark) .text-muted   { color: #6b7280; }
+    html:not(.dark) .border-subtle{ border-color: #e2e8f0; }
+    html:not(.dark) .modal-bg     { background: #ffffff; border: 1px solid #e2e8f0; }
+    html:not(.dark) .input-field  { background: #f8fafc; border-color: #e2e8f0; color: #111827; }
+    html:not(.dark) .input-field::placeholder { color: #9ca3af; }
+
+    .glow    { box-shadow: 0 0 30px rgba(92,124,250,0.3); }
+    .glow-sm { box-shadow: 0 0 15px rgba(92,124,250,0.2); }
+    .sql-result { font-family: 'JetBrains Mono', monospace; }
+    .sidebar-item { transition: all 0.2s ease; }
+    .sidebar-item:hover  { background: rgba(92,124,250,0.12); transform: translateX(2px); }
+    .sidebar-item.active { background: rgba(92,124,250,0.18); border-left: 3px solid #5c7cfa; }
+    .tag { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(92,124,250,0.4); border-radius: 2px; }
+
+    /* Modal */
+    #addDbModal { transition: opacity .2s ease; }
+    #addDbModal.hidden { pointer-events: none; }
+    #addDbModalPanel { transition: transform .25s ease, opacity .25s ease; }
+    #addDbModal.hidden #addDbModalPanel { transform: translateY(24px); opacity: 0; }
+    #addDbModal:not(.hidden) #addDbModalPanel { transform: translateY(0); opacity: 1; }
+
+    /* db-type-btn / cred-option shared */
+    .db-type-btn, .cred-option { transition: all .15s ease; }
+    .db-type-btn.selected, .cred-option.selected { border-color: rgba(92,124,250,.5) !important; background: rgba(92,124,250,.1) !important; }
+    .modal-tab { transition: all .15s ease; border-bottom: 2px solid transparent; }
+    .modal-tab.active { border-color: #5c7cfa; color: #fff; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full app-bg text-main dark:text-gray-100">
+
+  {% block body %}{% endblock %}
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ADD DATABASE MODAL  (available on every page)
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="addDbModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+       style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);"
+       onclick="if(event.target===this) closeModal()">
+
+    <div id="addDbModalPanel"
+         class="modal-bg w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+
+      <!-- Modal header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-subtle">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded bg-brand-600 flex items-center justify-center">
+            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+          </div>
+          <span class="font-semibold text-sm text-main">Add Database</span>
+        </div>
+        <button onclick="closeModal()" class="text-muted hover:text-main transition p-1 rounded-lg hover:bg-white/5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Source tabs -->
+      <div class="flex border-b border-subtle px-6 pt-3 gap-4">
+        <button onclick="switchModalSource('sql')" id="msrc_sql"
+          class="modal-tab active text-sm font-medium pb-3 text-main">
+          SQL Database
+        </button>
+        <button onclick="switchModalSource('file')" id="msrc_file"
+          class="modal-tab text-sm font-medium pb-3 text-muted">
+          Upload File
+        </button>
+      </div>
+
+      <!-- Scrollable body -->
+      <div class="overflow-y-auto scrollbar-thin flex-1 px-6 py-5 space-y-4">
+
+        <!-- ── SQL Database form ── -->
+        <div id="mform_sql" class="space-y-4">
+
+          <!-- Label -->
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1">Label <span class="text-brand-400">*</span></label>
+            <input id="m_label" type="text" placeholder="e.g. Production, Analytics, Staging"
+              class="input-field w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition border" />
+            <p class="text-xs text-muted mt-1">Appears as a tab in the chat interface.</p>
+          </div>
+
+          <!-- DB Type -->
+          <div>
+            <label class="block text-xs font-medium text-muted mb-2">Database Type</label>
+            <div class="grid grid-cols-4 gap-2">
+              <button type="button" onclick="mSelectType('postgresql')" id="mbtn_postgresql"
+                class="db-type-btn selected flex flex-col items-center gap-1.5 p-3 rounded-xl border border-white/10 text-xs">
+                <div class="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/></svg>
+                </div>
+                <span class="text-main">PostgreSQL</span>
+              </button>
+              <button type="button" onclick="mSelectType('mysql')" id="mbtn_mysql"
+                class="db-type-btn flex flex-col items-center gap-1.5 p-3 rounded-xl border border-white/10 text-xs">
+                <div class="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/></svg>
+                </div>
+                <span class="text-main">MySQL</span>
+              </button>
+              <button type="button" onclick="mSelectType('mssql')" id="mbtn_mssql"
+                class="db-type-btn flex flex-col items-center gap-1.5 p-3 rounded-xl border border-white/10 text-xs">
+                <div class="w-6 h-6 rounded-lg bg-red-500/20 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/></svg>
+                </div>
+                <span class="text-main">SQL Server</span>
+              </button>
+              <button type="button" onclick="mSelectType('sqlite')" id="mbtn_sqlite"
+                class="db-type-btn flex flex-col items-center gap-1.5 p-3 rounded-xl border border-white/10 text-xs">
+                <div class="w-6 h-6 rounded-lg bg-green-500/20 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/></svg>
+                </div>
+                <span class="text-main">SQLite</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Credential storage -->
+          <div>
+            <label class="block text-xs font-medium text-muted mb-2">Credential Storage</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" onclick="mSetCredMode('yes')" id="mcred_yes"
+                class="cred-option selected rounded-xl p-3 text-left border border-white/10">
+                <p class="text-xs font-semibold text-main mb-0.5">Store credentials</p>
+                <p class="text-xs text-muted">Save connection so you don't re-enter each time.</p>
+              </button>
+              <button type="button" onclick="mSetCredMode('no')" id="mcred_no"
+                class="cred-option rounded-xl p-3 text-left border border-white/10">
+                <p class="text-xs font-semibold text-main mb-0.5">Label only</p>
+                <p class="text-xs text-muted">Provide credentials each session.</p>
+              </button>
+            </div>
+          </div>
+
+          <!-- Connection details -->
+          <div id="mConnSection" class="rounded-xl border border-subtle overflow-hidden">
+            <div class="flex border-b border-subtle">
+              <button type="button" onclick="mSwitchInput('string')" id="mtab_string"
+                class="modal-tab active flex-1 py-2.5 text-xs font-medium text-main">Connection String</button>
+              <button type="button" onclick="mSwitchInput('fields')" id="mtab_fields"
+                class="modal-tab flex-1 py-2.5 text-xs font-medium text-muted">Host / Port / Credentials</button>
+            </div>
+            <div id="minput_string" class="p-4">
+              <div class="relative">
+                <input type="text" id="m_conn_str" placeholder="postgresql://user:password@host:5432/dbname"
+                  class="input-field w-full px-3 py-2.5 pr-9 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 border transition" />
+                <button type="button" onclick="mTogglePwd('m_conn_str')" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div id="minput_fields" class="p-4 space-y-3 hidden">
+              <div class="grid grid-cols-3 gap-2">
+                <div class="col-span-2">
+                  <input type="text" id="m_host" placeholder="Host / IP"
+                    class="input-field w-full px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 border transition" />
+                </div>
+                <input type="number" id="m_port" placeholder="Port"
+                  class="input-field w-full px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 border transition" />
+              </div>
+              <input type="text" id="m_dbname" placeholder="Database name"
+                class="input-field w-full px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 border transition" />
+              <div class="grid grid-cols-2 gap-2">
+                <input type="text" id="m_dbuser" placeholder="Username"
+                  class="input-field w-full px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 border transition" />
+                <div class="relative">
+                  <input type="password" id="m_dbpass" placeholder="Password"
+                    class="input-field w-full px-3 py-2 pr-8 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 border transition" />
+                  <button type="button" onclick="mTogglePwd('m_dbpass')" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="m_ssl" class="w-3.5 h-3.5 rounded accent-brand-500" />
+                <label for="m_ssl" class="text-xs text-muted">Use SSL / TLS</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Schema description -->
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1">Schema Description <span class="text-muted font-normal">(optional)</span></label>
+            <textarea id="m_schema_desc" rows="2" placeholder="Describe what this database contains..."
+              class="input-field w-full px-3 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 border transition resize-none"></textarea>
+          </div>
+        </div>
+
+        <!-- ── File upload form ── -->
+        <div id="mform_file" class="hidden space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1">Label <span class="text-brand-400">*</span></label>
+            <input id="m_file_label" type="text" placeholder="e.g. Sales Data, Customer Report"
+              class="input-field w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition border" />
+          </div>
+
+          <div id="mDropZone"
+            class="border-2 border-dashed border-white/15 rounded-xl p-6 text-center cursor-pointer hover:border-brand-500/40 hover:bg-brand-500/5 transition"
+            onclick="document.getElementById('m_fileInput').click()"
+            ondragover="mOnDragOver(event)" ondragleave="mOnDragLeave(event)" ondrop="mOnDrop(event)">
+            <div id="mDropIdle">
+              <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-2">
+                <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+              </div>
+              <p class="text-sm text-muted">Drag & drop or <span class="text-brand-400">browse</span></p>
+              <p class="text-xs text-muted mt-0.5">CSV, XLS, XLSX</p>
+            </div>
+            <div id="mDropSelected" class="hidden">
+              <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-2">
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <p id="mSelectedName" class="text-sm font-medium text-main"></p>
+              <button type="button" onclick="mClearFile(event)" class="text-xs text-muted hover:text-red-400 mt-1 transition">Remove</button>
+            </div>
+          </div>
+          <input type="file" id="m_fileInput" accept=".csv,.xls,.xlsx" class="hidden" onchange="mOnFileSelected(this)" />
+        </div>
+
+        <!-- Error slot -->
+        <div id="mError" class="hidden items-center gap-2 text-xs text-red-400 px-1">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span id="mErrorText"></span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 border-t border-subtle flex items-center justify-end gap-3">
+        <button onclick="closeModal()" class="px-4 py-2 text-sm text-muted hover:text-main transition">Cancel</button>
+        <button onclick="mSubmit()" id="mSubmitBtn"
+          class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-xl transition glow-sm">
+          Add Database
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  function toggleTheme() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('nl2sql_theme', isDark ? 'dark' : 'light');
+  }
+
+  // ── Modal open/close ───────────────────────────────────────────────────────
+  function openAddDbModal() {
+    document.getElementById('addDbModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    // Reset to SQL tab
+    switchModalSource('sql');
+    document.getElementById('m_label').focus();
+  }
+  function closeModal() {
+    document.getElementById('addDbModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    document.getElementById('mError').classList.add('hidden');
+    document.getElementById('mError').classList.remove('flex');
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  // ── Modal: source tabs ─────────────────────────────────────────────────────
+  let mSource = 'sql';
+  function switchModalSource(src) {
+    mSource = src;
+    document.getElementById('mform_sql').classList.toggle('hidden', src !== 'sql');
+    document.getElementById('mform_file').classList.toggle('hidden', src !== 'file');
+    document.getElementById('msrc_sql').classList.toggle('active', src === 'sql');
+    document.getElementById('msrc_sql').classList.toggle('text-muted', src !== 'sql');
+    document.getElementById('msrc_file').classList.toggle('active', src === 'file');
+    document.getElementById('msrc_file').classList.toggle('text-muted', src !== 'file');
+    document.getElementById('mSubmitBtn').textContent = src === 'file' ? 'Upload & Create' : 'Add Database';
+  }
+
+  // ── Modal: DB type ─────────────────────────────────────────────────────────
+  let mDbType = 'postgresql';
+  const M_PORTS = { postgresql:'5432', mysql:'3306', mssql:'1433', sqlite:'' };
+  function mSelectType(val) {
+    mDbType = val;
+    document.querySelectorAll('.db-type-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('mbtn_' + val).classList.add('selected');
+    const portEl = document.getElementById('m_port');
+    if (portEl) portEl.placeholder = M_PORTS[val] || '';
+  }
+
+  // ── Modal: cred mode ───────────────────────────────────────────────────────
+  let mCredMode = 'yes';
+  function mSetCredMode(mode) {
+    mCredMode = mode;
+    document.getElementById('mcred_yes').classList.toggle('selected', mode === 'yes');
+    document.getElementById('mcred_no').classList.toggle('selected', mode === 'no');
+    document.getElementById('mConnSection').style.display = mode === 'yes' ? '' : 'none';
+  }
+
+  // ── Modal: input mode tabs ─────────────────────────────────────────────────
+  let mInputMode = 'string';
+  function mSwitchInput(mode) {
+    mInputMode = mode;
+    document.getElementById('minput_string').classList.toggle('hidden', mode !== 'string');
+    document.getElementById('minput_fields').classList.toggle('hidden', mode !== 'fields');
+    document.getElementById('mtab_string').classList.toggle('active', mode === 'string');
+    document.getElementById('mtab_string').classList.toggle('text-muted', mode !== 'string');
+    document.getElementById('mtab_fields').classList.toggle('active', mode === 'fields');
+    document.getElementById('mtab_fields').classList.toggle('text-muted', mode !== 'fields');
+  }
+  function mTogglePwd(id) {
+    const el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
+  }
+
+  // ── Modal: file drop ───────────────────────────────────────────────────────
+  function mOnDragOver(e) { e.preventDefault(); document.getElementById('mDropZone').classList.add('border-brand-500/60'); }
+  function mOnDragLeave()  { document.getElementById('mDropZone').classList.remove('border-brand-500/60'); }
+  function mOnDrop(e) {
+    e.preventDefault(); mOnDragLeave();
+    if (e.dataTransfer.files[0]) mApplyFile(e.dataTransfer.files[0]);
+  }
+  function mOnFileSelected(input) { if (input.files[0]) mApplyFile(input.files[0]); }
+  function mApplyFile(file) {
+    const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+    if (!['.csv','.xls','.xlsx'].includes(ext)) { mShowError('Only CSV, XLS and XLSX are supported.'); return; }
+    const dt = new DataTransfer(); dt.items.add(file);
+    document.getElementById('m_fileInput').files = dt.files;
+    document.getElementById('mDropIdle').classList.add('hidden');
+    document.getElementById('mDropSelected').classList.remove('hidden');
+    document.getElementById('mSelectedName').textContent = file.name;
+  }
+  function mClearFile(e) {
+    e.stopPropagation();
+    document.getElementById('m_fileInput').value = '';
+    document.getElementById('mDropSelected').classList.add('hidden');
+    document.getElementById('mDropIdle').classList.remove('hidden');
+  }
+
+  // ── Modal: submit ──────────────────────────────────────────────────────────
+  function mShowError(msg) {
+    const el = document.getElementById('mError');
+    document.getElementById('mErrorText').textContent = msg;
+    el.classList.remove('hidden'); el.classList.add('flex');
+  }
+  function mHideError() {
+    const el = document.getElementById('mError');
+    el.classList.add('hidden'); el.classList.remove('flex');
+  }
+
+  function getCsrfToken() {
+    const v = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)');
+    return v ? v[2] : '';
+  }
+
+  async function mSubmit() {
+    mHideError();
+    const btn = document.getElementById('mSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      let res;
+      if (mSource === 'file') {
+        const label = document.getElementById('m_file_label').value.trim();
+        const file  = document.getElementById('m_fileInput').files[0];
+        if (!label) { mShowError('Please provide a label.'); return; }
+        if (!file)  { mShowError('Please select a file.'); return; }
+        const fd = new FormData();
+        fd.append('label', label);
+        fd.append('datafile', file);
+        fd.append('csrfmiddlewaretoken', getCsrfToken());
+        res = await fetch('/databases/upload/', { method: 'POST', body: fd });
+      } else {
+        const label = document.getElementById('m_label').value.trim();
+        if (!label) { mShowError('Please provide a label.'); return; }
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', getCsrfToken());
+        body.append('label', label);
+        body.append('db_type', mDbType);
+        body.append('store_credentials', mCredMode);
+        body.append('schema_description', document.getElementById('m_schema_desc').value.trim());
+        body.append('input_mode', mInputMode);
+        if (mCredMode === 'yes') {
+          if (mInputMode === 'string') {
+            body.append('connection_string', document.getElementById('m_conn_str').value.trim());
+          } else {
+            body.append('host',        document.getElementById('m_host').value.trim());
+            body.append('port',        document.getElementById('m_port').value.trim());
+            body.append('db_name',     document.getElementById('m_dbname').value.trim());
+            body.append('db_user',     document.getElementById('m_dbuser').value.trim());
+            body.append('db_password', document.getElementById('m_dbpass').value);
+            body.append('use_ssl',     document.getElementById('m_ssl').checked ? 'on' : '');
+          }
+        }
+        res = await fetch('/databases/add/', { method: 'POST', body });
+      }
+      // Both views redirect on success — follow the redirect URL
+      if (res.redirected) {
+        window.location.href = res.url;
+      } else if (res.ok) {
+        window.location.href = '/dashboard/';
+      } else {
+        mShowError('Something went wrong. Please check your details and try again.');
+      }
+    } catch (err) {
+      mShowError('Network error. Please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = mSource === 'file' ? 'Upload & Create' : 'Add Database';
+    }
+  }
+  </script>
+</body>
+</html>
