@@ -475,6 +475,42 @@ def models_for_chat_view(request):
     return JsonResponse({'models': data})
 
 
+@require_POST
+def dashboard_chart_view(request, db_id):
+    """
+    Receives a plain-English chart request.
+    Returns: { title, chart_type, labels, datasets, sql, error }
+    chart_type: bar | line | pie | doughnut | area | scatter
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid request.'}, status=400)
+
+    question = data.get('question', '').strip()
+    model_id = data.get('model_id')
+    if not question:
+        return JsonResponse({'error': 'Empty question.'}, status=400)
+
+    llm_model = None
+    if model_id:
+        try:
+            llm_model = LLMModel.objects.select_related('provider').get(id=model_id, user=request.user)
+        except LLMModel.DoesNotExist:
+            pass
+    if not llm_model:
+        llm_model = LLMModel.objects.filter(user=request.user, is_default=True).select_related('provider').first()
+
+    from .aiView import run_chart_query
+    result = run_chart_query(question, db, llm_model=llm_model)
+    return JsonResponse(result)
+
+
 def clear_history_view(request, db_id):
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Unauthenticated'}, status=401)

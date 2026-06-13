@@ -298,3 +298,163 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
         "rows":        rows,
         "error":       query_error,
     }
+
+
+# ── Chart / Dashboard pipeline ─────────────────────────────────────────────────
+
+_CHART_SYSTEM = """You are a data visualisation expert. Given a database schema and a user's chart request, you must:
+1. Write a SQL SELECT query that retrieves the data needed for the chart.
+2. Decide the best chart type: bar, line, pie, doughnut, or scatter.
+3. Identify which column is the label (x-axis / category) and which column(s) are values (y-axis / series).
+
+Respond ONLY with a valid JSON object — no markdown, no explanation:
+{{
+  "title": "Short descriptive chart title",
+  "chart_type": "bar" | "line" | "pie" | "doughnut" | "scatter",
+  "sql": "SELECT ... FROM ...",
+  "label_column": "column_name_for_labels",
+  "value_columns": ["col1", "col2"]
+}}
+
+Rules:
+- Only SELECT statements. Never INSERT, UPDATE, DELETE, DROP.
+- Use exact table/column names from the schema.
+- Keep result sets under 50 rows for readability.
+- For time-series, use line. For comparisons, use bar. For proportions, use pie/doughnut.
+"""
+
+_CHART_COLORS = [
+    'rgba(92,124,250,0.8)',   # brand blue
+    'rgba(167,139,250,0.8)',  # purple
+    'rgba(52,211,153,0.8)',   # green
+    'rgba(251,191,36,0.8)',   # yellow
+    'rgba(251,113,133,0.8)',  # pink
+    'rgba(56,189,248,0.8)',   # sky
+    'rgba(251,146,60,0.8)',   # orange
+    'rgba(163,230,53,0.8)',   # lime
+]
+
+
+def run_chart_query(question: str, db, llm_model=None) -> dict:
+    """
+    Generates a chart spec from a plain-English question.
+    Returns a dict ready to pass to Chart.js:
+    {
+        title, chart_type, sql,
+        labels: [...],
+        datasets: [{ label, data: [...], backgroundColor, borderColor }],
+        error: ""
+    }
+    """
+    schema = db.fetched_schema or fetch_schema(db)
+
+    # Resolve provider
+    if llm_model:
+        provider_name = llm_model.provider.provider
+        model_id      = llm_model.model_id
+        api_key       = llm_model.provider.api_key
+        base_url      = llm_model.provider.base_url
+
+        def _llm():
+            import importlib
+            mod = importlib.import_module(f"app.providers.{provider_name}")
+            kwargs = {'api_key': api_key}
+            if provider_name in ('ollama', 'openrouter'):
+                kwargs['base_url'] = base_url
+            return mod.get_summary_llm(model_id, **kwargs)
+    else:
+        _llm = get_summary_llm
+
+    system = _CHART_SYSTEM
+    schema_section = f"\nDATABASE SCHEMA:\n{schema}" if schema else ""
+    prompt = f"{system}{schema_section}\n\nUser request: {question}"
+
+    try:
+        from langchain_core.messages import HumanMessage
+        llm = _llm()
+        response = llm.invoke([HumanMessage(content=prompt)])
+        raw = _extract_text(response.content).strip()
+        # Strip markdown fences if present
+        for fence in ['```json', '```']:
+            raw = raw.replace(fence, '')
+        raw = raw.strip()
+        spec = json.loads(raw)
+    except Exception as e:
+        logger.error(f"[CHART LLM ERROR] {e}", exc_info=True)
+        return {'error': f'Could not generate chart spec: {e}', 'title': '', 'chart_type': 'bar',
+                'labels': [], 'datasets': [], 'sql': ''}
+
+    sql            = spec.get('sql', '').strip().rstrip(';')
+    chart_type     = spec.get('chart_type', 'bar')
+    title          = spec.get('title', question[:60])
+    label_col      = spec.get('label_column', '')
+    value_cols     = spec.get('value_columns', [])
+
+    # Safety check
+    first_word = sql.split()[0].upper() if sql.strip() else ''
+    if first_word not in ('SELECT', 'WITH', 'EXPLAIN'):
+        return {'error': 'Non-SELECT query blocked.', 'title': title, 'chart_type': chart_type,
+                'labels': [], 'datasets': [], 'sql': sql}
+
+    result = execute_query(db, sql)
+    if result['error']:
+        return {'error': result['error'], 'title': title, 'chart_type': chart_type,
+                'labels': [], 'datasets': [], 'sql': sql}
+
+    columns = result['columns']
+    rows    = result['rows']
+
+    if not rows:
+        return {'error': 'Query returned no data.', 'title': title, 'chart_type': chart_type,
+                'labels': [], 'datasets': [], 'sql': sql}
+
+    # If LLM didn't specify columns, infer: first col = labels, rest = values
+    if not label_col and columns:
+        label_col = columns[0]
+    if not value_cols and len(columns) > 1:
+        value_cols = [c for c in columns if c != label_col]
+    if not value_cols and columns:
+        value_cols = [c for c in columns if c != label_col] or [columns[-1]]
+
+    col_idx  = {c: i for i, c in enumerate(columns)}
+    label_i  = col_idx.get(label_col, 0)
+    labels   = [r[label_i] for r in rows]
+
+    datasets = []
+    for vi, vcol in enumerate(value_cols):
+        vi_idx = col_idx.get(vcol, -1)
+        if vi_idx == -1:
+            continue
+        raw_vals = [r[vi_idx] for r in rows]
+        # Convert to float where possible
+        data = []
+        for v in raw_vals:
+            try:
+                data.append(float(v))
+            except (TypeError, ValueError):
+                data.append(0)
+
+        color  = _CHART_COLORS[vi % len(_CHART_COLORS)]
+        border = color.replace('0.8', '1')
+        datasets.append({
+            'label':           vcol,
+            'data':            data,
+            'backgroundColor': [color] * len(data) if chart_type in ('pie', 'doughnut') else color,
+            'borderColor':     border,
+            'borderWidth':     2,
+            'fill':            chart_type == 'area',
+            'tension':         0.4,
+        })
+
+    # area is just line with fill=True in Chart.js
+    if chart_type == 'area':
+        chart_type = 'line'
+
+    return {
+        'title':      title,
+        'chart_type': chart_type,
+        'sql':        sql,
+        'labels':     labels,
+        'datasets':   datasets,
+        'error':      '',
+    }
