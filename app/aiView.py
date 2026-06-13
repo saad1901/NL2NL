@@ -14,7 +14,7 @@ run_nl_query(question, db, status_cb=None) -> dict
 """
 
 import json
-# import logging
+import logging
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_core.tools import tool

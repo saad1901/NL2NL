@@ -2,6 +2,7 @@
 {% block title %}{{ active_db.label }} — NL2SQL{% endblock %}
 
 {% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   .chat-bubble-user { background: linear-gradient(135deg, #4c6ef5, #7c3aed); }
   .chat-bubble-ai { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
@@ -17,6 +18,12 @@
   .db-tab.active{background:rgba(92,124,250,.15);border-color:rgba(92,124,250,.4);color:#fff}
   .fade-in{animation:fadeIn .25s ease}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Dashboard panel */
+  #dashboardPanel { transition: transform .3s ease, opacity .3s ease; }
+  #dashboardPanel.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
+  .chart-card { break-inside: avoid; }
+
   /* Credentials banner */
   .cred-tab { transition: all .15s ease; }
   .cred-tab.active { background: rgba(92,124,250,.15); border-bottom: 2px solid #5c7cfa; color: white; }
@@ -394,6 +401,81 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     DASHBOARD PANEL — slides over the chat area
+═══════════════════════════════════════════════════════════ -->
+<div id="dashboardPanel" class="hidden fixed inset-0 z-40 flex flex-col bg-gray-950"
+     style="left:224px"> <!-- offset for sidebar width -->
+
+  <!-- Panel header -->
+  <div class="flex items-center justify-between px-6 py-3.5 border-b border-white/5 bg-gray-900/60 flex-shrink-0">
+    <div class="flex items-center gap-3">
+      <button onclick="closeDashboard()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        <span class="text-sm font-semibold text-white">Dashboard — {{ active_db.label }}</span>
+      </div>
+    </div>
+    <button onclick="clearDashboard()" class="text-xs text-gray-600 hover:text-red-400 transition flex items-center gap-1">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+      Clear all
+    </button>
+  </div>
+
+  <!-- Chart input -->
+  <div class="flex-shrink-0 px-6 py-4 border-b border-white/5 bg-gray-900/30">
+    <div class="flex items-center gap-3">
+      <input id="chartQuestion" type="text"
+        placeholder="e.g. Monthly revenue trend, Top 10 customers by sales, Revenue by category…"
+        onkeydown="if(event.key==='Enter') addChart()"
+        class="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600
+               text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition" />
+      <button onclick="addChart()" id="addChartBtn"
+        class="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium
+               rounded-xl transition flex-shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add Chart
+      </button>
+    </div>
+    <p class="text-xs text-gray-600 mt-1.5 px-1">Describe what you want to visualise — the AI will write the query and choose the best chart type.</p>
+  </div>
+
+  <!-- Charts grid -->
+  <div id="chartsGrid" class="flex-1 overflow-y-auto scrollbar-thin p-6">
+
+    <!-- Empty state -->
+    <div id="dashboardEmpty" class="flex flex-col items-center justify-center h-full text-center">
+      <div class="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/15 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+      </div>
+      <p class="text-base font-medium text-white mb-1">Your dashboard is empty</p>
+      <p class="text-sm text-gray-500 max-w-sm">Type a chart request above — like "monthly revenue trend" or "top 10 products by sales".</p>
+      <div class="flex flex-wrap justify-center gap-2 mt-5">
+        <button onclick="useChartExample(this)" class="px-3 py-1.5 rounded-full text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/10 hover:border-purple-500/30 hover:text-white transition">Monthly revenue trend</button>
+        <button onclick="useChartExample(this)" class="px-3 py-1.5 rounded-full text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/10 hover:border-purple-500/30 hover:text-white transition">Top 10 customers by sales</button>
+        <button onclick="useChartExample(this)" class="px-3 py-1.5 rounded-full text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/10 hover:border-purple-500/30 hover:text-white transition">Sales by category</button>
+        <button onclick="useChartExample(this)" class="px-3 py-1.5 rounded-full text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/10 hover:border-purple-500/30 hover:text-white transition">Orders per month</button>
+      </div>
+    </div>
+
+    <!-- Charts injected here as 2-column grid -->
+    <div id="chartsContainer" class="hidden grid grid-cols-1 xl:grid-cols-2 gap-5"></div>
+
+  </div>
 </div>
 
 <script>
@@ -1065,5 +1147,127 @@ window.addEventListener('load', () => {
   loadModels();
   scrollBottom();
 });
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════════
+const chartInstances = {};
+
+function openDashboard() {
+  document.getElementById('dashboardPanel').classList.remove('hidden');
+  document.getElementById('chartQuestion').focus();
+}
+function closeDashboard() {
+  document.getElementById('dashboardPanel').classList.add('hidden');
+}
+function clearDashboard() {
+  if (!confirm('Remove all charts?')) return;
+  Object.values(chartInstances).forEach(c => c.destroy());
+  Object.keys(chartInstances).forEach(k => delete chartInstances[k]);
+  document.getElementById('chartsContainer').innerHTML = '';
+  document.getElementById('chartsContainer').classList.add('hidden');
+  document.getElementById('dashboardEmpty').classList.remove('hidden');
+}
+function useChartExample(btn) {
+  document.getElementById('chartQuestion').value = btn.textContent.trim();
+  document.getElementById('chartQuestion').focus();
+}
+
+async function addChart() {
+  const input = document.getElementById('chartQuestion');
+  const question = input.value.trim();
+  if (!question) return;
+
+  const btn = document.getElementById('addChartBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> Generating…`;
+
+  try {
+    const res = await fetch(`/chat/${DB_ID}/dashboard/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ question, model_id: selectedModelId }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      alert('Chart error: ' + data.error);
+    } else {
+      renderChart(data);
+      input.value = '';
+    }
+  } catch(e) {
+    alert('Network error. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add Chart`;
+  }
+}
+
+function renderChart(data) {
+  document.getElementById('dashboardEmpty').classList.add('hidden');
+  const container = document.getElementById('chartsContainer');
+  container.classList.remove('hidden');
+
+  const id = 'chart_' + Date.now();
+  const card = document.createElement('div');
+  card.className = 'chart-card glass rounded-2xl p-5 space-y-3 fade-in';
+  card.id = 'card_' + id;
+  card.innerHTML = `
+    <div class="flex items-center justify-between">
+      <p class="text-sm font-semibold text-white truncate">${esc(data.title)}</p>
+      <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+        <span class="tag bg-purple-500/15 text-purple-400 text-xs capitalize">${esc(data.chart_type)}</span>
+        <button onclick="removeChart('${id}')" class="text-gray-600 hover:text-red-400 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div style="position:relative;height:280px">
+      <canvas id="${id}"></canvas>
+    </div>
+    <details class="text-xs">
+      <summary class="text-gray-600 cursor-pointer hover:text-gray-400 transition">View SQL</summary>
+      <pre class="sql-block mt-2 text-gray-400">${esc(data.sql)}</pre>
+    </details>`;
+  container.appendChild(card);
+
+  const isDark = document.documentElement.classList.contains('dark');
+  const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const labelColor = isDark ? '#9ca3af' : '#6b7280';
+
+  const ctx = document.getElementById(id).getContext('2d');
+  chartInstances[id] = new Chart(ctx, {
+    type: data.chart_type,
+    data: { labels: data.labels, datasets: data.datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: labelColor, font: { family: 'Inter', size: 11 } },
+          display: data.datasets.length > 1 || ['pie','doughnut'].includes(data.chart_type),
+        },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: ['pie','doughnut'].includes(data.chart_type) ? {} : {
+        x: { ticks: { color: labelColor, font: { size: 10 }, maxRotation: 45 }, grid: { color: gridColor } },
+        y: { ticks: { color: labelColor, font: { size: 10 } }, grid: { color: gridColor } },
+      },
+    },
+  });
+}
+
+function removeChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+  document.getElementById('card_' + id)?.remove();
+  if (!document.getElementById('chartsContainer').children.length) {
+    document.getElementById('chartsContainer').classList.add('hidden');
+    document.getElementById('dashboardEmpty').classList.remove('hidden');
+  }
+}
 </script>
 {% endblock %}
