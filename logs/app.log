@@ -1119,3 +1119,6 @@ langchain_google_genai.chat_models.ChatGoogleGenerativeAIError: Error calling mo
 [2026-06-13 16:56:36] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
 [2026-06-13 18:19:53] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
 [2026-06-13 18:21:15] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 18:42:20] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
+[2026-06-13 18:43:28] INFO app.views — [FILE UPLOAD] Loaded sheet 'Sheet1' as table 'Sheet1' (1275 rows) for user saadiqbal1921@gmail.com
+[2026-06-13 18:55:51] INFO app.ai — [PROVIDER] Using ollama / qwen2.5-coder
