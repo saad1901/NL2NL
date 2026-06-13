@@ -43,7 +43,8 @@ uv.lock
 .secrets
 *.env
 secrets.json
-
+logs/
+*.log
 # ==========================================
 # 5. Local Project Tracking & IDE Configs
 # ==========================================
