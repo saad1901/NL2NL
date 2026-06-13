@@ -409,6 +409,7 @@ async function loadModels() {
     if (!models.length) {
       container.innerHTML = '<p class="px-4 py-2 text-xs text-gray-500">No models configured.</p>';
       btnLabel.textContent = 'No model';
+      disableInput('Add a model in Settings to start querying');
       return;
     }
 
@@ -416,6 +417,7 @@ async function loadModels() {
     let defaultModel = models.find(m => m.is_default) || models[0];
     selectedModelId = defaultModel.id;
     btnLabel.textContent = defaultModel.display_name;
+    enableInput();  // now safe to query
 
     models.forEach(m => {
       const el = document.createElement('button');
@@ -599,6 +601,11 @@ async function sendQuestion() {
     payload.credentials = creds;
   }
   if (selectedModelId) payload.model_id = selectedModelId;
+  else {
+    appendError('No AI model selected. Please add a model in Settings first.');
+    busy = false;
+    return;
+  }
 
   busy = true;
   hideEmpty();
@@ -918,6 +925,7 @@ async function clearHistory() {
 
 window.addEventListener('load', () => {
   initCredsBanner();
+  if (!NEEDS_CREDS) disableInput('Loading models…');
   loadModels();
   scrollBottom();
 });

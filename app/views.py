@@ -408,7 +408,11 @@ def save_provider_view(request):
 
     obj, created = LLMProvider.objects.update_or_create(
         user=request.user, provider=provider,
-        defaults={'api_key': api_key, 'base_url': base_url},
+        defaults={
+            'api_key':  api_key,
+            # Only store base_url for Ollama — cloud providers don't need it
+            'base_url': base_url if provider == 'ollama' else '',
+        },
     )
     logger.info(f"[SETTINGS] Provider '{provider}' {'created' if created else 'updated'} for {request.user.email}")
     return JsonResponse({'ok': True, 'id': obj.id, 'masked_key': obj.masked_key()})

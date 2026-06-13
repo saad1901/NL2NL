@@ -1,30 +1,21 @@
 """
-Provider: Google Gemini (via langchain-google-genai)
-Requires: GEMINI_API_KEY in .env
-Models:   gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash, etc.
+Provider: Google Gemini
+API key comes from the user's LLMProvider record (Settings UI).
+Models: gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash, etc.
 """
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.tools import tool
 
 
-def get_llm(model: str, tools: list):
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise EnvironmentError("GEMINI_API_KEY is not set in .env")
-    llm = ChatGoogleGenerativeAI(
-        model=model,
-        google_api_key=api_key,
-        temperature=0,
-    )
-    return llm.bind_tools(tools)
+def get_llm(model: str, tools: list, api_key: str = ""):
+    key = api_key or os.environ.get("GEMINI_API_KEY", "")
+    print(f"[GEMINI] model={model} key={key[:8] if key else 'EMPTY'}...")
+    if not key:
+        raise EnvironmentError("Gemini API key is missing. Add it in Settings → Providers.")
+    return ChatGoogleGenerativeAI(model=model, google_api_key=key, temperature=0).bind_tools(tools)
 
 
-def get_summary_llm(model: str):
-    api_key = os.environ.get("GEMINI_API_KEY")
-    llm = ChatGoogleGenerativeAI(
-        model=model,
-        google_api_key=api_key,
-        temperature=0,
-    )
-    return llm
+def get_summary_llm(model: str, api_key: str = ""):
+    key = api_key or os.environ.get("GEMINI_API_KEY", "")
+    print(f"[GEMINI summary] model={model} key={key[:8] if key else 'EMPTY'}...")
+    return ChatGoogleGenerativeAI(model=model, google_api_key=key, temperature=0)

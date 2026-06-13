@@ -55,10 +55,11 @@ class QueryHistory(models.Model):
 
 class LLMProvider(models.Model):
     PROVIDER_CHOICES = [
-        ('gemini',    'Google Gemini'),
-        ('openai',    'OpenAI'),
-        ('anthropic', 'Anthropic'),
-        ('ollama',    'Ollama (local)'),
+        ('gemini',      'Google Gemini'),
+        ('openai',      'OpenAI'),
+        ('anthropic',   'Anthropic'),
+        ('openrouter',  'OpenRouter'),
+        ('ollama',      'Ollama (local)'),
     ]
     user         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='llm_providers')
     provider     = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
