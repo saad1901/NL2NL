@@ -91,30 +91,8 @@
   <!-- ── Main ── -->
   <main class="flex-1 flex flex-col overflow-hidden">
 
-    <!-- Top bar: DB tabs -->
+    <!-- Top bar -->
     <header class="flex-shrink-0 border-b border-white/5 bg-gray-900/40">
-      <!-- DB tab row -->
-      <div class="flex items-center gap-1.5 px-4 pt-3 pb-0 overflow-x-auto scrollbar-thin">
-        {% for db in all_dbs %}
-        <a href="/chat/{{ db.id }}/"
-          class="db-tab flex items-center gap-2 px-4 py-2 rounded-t-lg border border-transparent text-sm font-medium whitespace-nowrap transition
-                 {% if db.id == active_db.id %}active{% else %}text-gray-400 hover:text-gray-200 hover:bg-white/5{% endif %}">
-          <svg class="w-3.5 h-3.5 flex-shrink-0 {% if db.id == active_db.id %}text-brand-400{% else %}text-gray-600{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/>
-          </svg>
-          {{ db.label }}
-        </a>
-        {% endfor %}
-        <a href="/databases/add/"
-          onclick="event.preventDefault(); openAddDbModal()"
-          class="flex items-center gap-1 px-3 py-2 rounded-t-lg text-xs text-gray-600 hover:text-brand-400 hover:bg-white/5 transition whitespace-nowrap">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          Add
-        </a>
-      </div>
-      <!-- Active DB info row -->
       <div class="flex items-center justify-between px-5 py-2.5">
         <div class="flex items-center gap-2">
           <span class="text-sm font-semibold text-white">{{ active_db.label }}</span>
@@ -127,10 +105,10 @@
           <!-- Theme toggle -->
           <button onclick="toggleTheme()" title="Toggle theme"
             class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-500 hover:text-gray-300 transition">
-            <svg class="w-3.5 h-3.5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="theme-icon-dark w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
             </svg>
-            <svg class="w-3.5 h-3.5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="theme-icon-light w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
             </svg>
           </button>

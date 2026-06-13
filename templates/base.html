@@ -90,7 +90,44 @@
     #addDbModal.hidden #addDbModalPanel { transform: translateY(24px); opacity: 0; }
     #addDbModal:not(.hidden) #addDbModalPanel { transform: translateY(0); opacity: 1; }
 
-    /* db-type-btn / cred-option shared */
+    /* Light mode overrides for hardcoded dark Tailwind classes */
+    html:not(.dark) body { background: #f1f5f9 !important; color: #111827 !important; }
+    html:not(.dark) .bg-gray-950 { background: #f1f5f9 !important; }
+    html:not(.dark) .bg-gray-900\/60, html:not(.dark) .bg-gray-900\/40 { background: rgba(255,255,255,0.85) !important; }
+    html:not(.dark) .border-white\/5 { border-color: #e2e8f0 !important; }
+    html:not(.dark) .border-white\/10 { border-color: #cbd5e1 !important; }
+    html:not(.dark) .text-gray-100, html:not(.dark) .text-gray-200 { color: #111827 !important; }
+    html:not(.dark) .text-gray-300 { color: #374151 !important; }
+    html:not(.dark) .text-gray-400 { color: #6b7280 !important; }
+    html:not(.dark) .text-gray-500, html:not(.dark) .text-gray-600 { color: #9ca3af !important; }
+    html:not(.dark) .text-white { color: #111827 !important; }
+    html:not(.dark) .bg-white\/5 { background: rgba(0,0,0,0.04) !important; }
+    html:not(.dark) .bg-white\/3 { background: rgba(0,0,0,0.02) !important; }
+    html:not(.dark) .bg-white\/8 { background: rgba(0,0,0,0.05) !important; }
+    html:not(.dark) .bg-white\/10 { background: rgba(0,0,0,0.06) !important; }
+    html:not(.dark) .bg-black\/20 { background: rgba(0,0,0,0.03) !important; }
+    html:not(.dark) .glass { background: rgba(255,255,255,0.8) !important; border-color: #e2e8f0 !important; }
+    html:not(.dark) .chat-bubble-user { background: linear-gradient(135deg, #4c6ef5, #6d28d9) !important; }
+    html:not(.dark) .chat-bubble-user, html:not(.dark) .chat-bubble-user * { color: #ffffff !important; }
+    html:not(.dark) .chat-bubble-ai { background: #ffffff !important; border-color: #e2e8f0 !important; }
+    html:not(.dark) .chat-bubble-ai, html:not(.dark) .chat-bubble-ai p, html:not(.dark) .chat-bubble-ai span, html:not(.dark) .chat-bubble-ai div { color: #111827 !important; }
+    html:not(.dark) .sql-block { background: #f8fafc !important; border-color: #e2e8f0 !important; color: #374151 !important; }
+    html:not(.dark) .sql-block { background: #f8fafc !important; border-color: #e2e8f0 !important; color: #374151 !important; }
+    html:not(.dark) .result-table th { color: #6b7280 !important; }
+    html:not(.dark) .result-table td { border-color: #e2e8f0 !important; }
+    html:not(.dark) .result-table tr:hover td { background: rgba(92,124,250,0.05) !important; }
+    html:not(.dark) .bg-brand-600\/20 { background: rgba(92,124,250,0.12) !important; }
+    html:not(.dark) .placeholder-gray-600::placeholder { color: #9ca3af !important; }
+    html:not(.dark) input, html:not(.dark) textarea, html:not(.dark) select {
+      background: #f8fafc !important; border-color: #e2e8f0 !important; color: #111827 !important;
+    }
+    html:not(.dark) input::placeholder, html:not(.dark) textarea::placeholder { color: #9ca3af !important; }
+    html:not(.dark) .db-tab.active { background: rgba(92,124,250,0.1) !important; }
+    html:not(.dark) .sidebar-item:hover { background: rgba(92,124,250,0.08) !important; }
+    html:not(.dark) .sidebar-item.active { background: rgba(92,124,250,0.12) !important; }
+    html:not(.dark) #addDbModalPanel { background: #ffffff !important; border-color: #e2e8f0 !important; }
+    html:not(.dark) .modal-tab.active { color: #111827 !important; }
+    html:not(.dark) .gradient-bg { background: linear-gradient(135deg, #e0e7ff, #f0f4ff, #dbeafe) !important; }
     .db-type-btn, .cred-option { transition: all .15s ease; }
     .db-type-btn.selected, .cred-option.selected { border-color: rgba(92,124,250,.5) !important; background: rgba(92,124,250,.1) !important; }
     .modal-tab { transition: all .15s ease; border-bottom: 2px solid transparent; }
@@ -315,10 +352,19 @@
 
   <script>
   // ── Theme ─────────────────────────────────────────────────────────────────
-  function toggleTheme() {
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('nl2sql_theme', isDark ? 'dark' : 'light');
+  function _applyTheme(isDark) {
+    document.documentElement.classList.toggle('dark', isDark);
+    // Swap all theme icons on the page
+    document.querySelectorAll('.theme-icon-dark').forEach(el => el.style.display = isDark ? 'block' : 'none');
+    document.querySelectorAll('.theme-icon-light').forEach(el => el.style.display = isDark ? 'none' : 'block');
   }
+  function toggleTheme() {
+    const isDark = !document.documentElement.classList.contains('dark');
+    localStorage.setItem('nl2sql_theme', isDark ? 'dark' : 'light');
+    _applyTheme(isDark);
+  }
+  // Apply on load (also fixes icon state)
+  _applyTheme(document.documentElement.classList.contains('dark'));
 
   // ── Modal open/close ───────────────────────────────────────────────────────
   function openAddDbModal() {
