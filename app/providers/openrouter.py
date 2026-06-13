@@ -29,7 +29,6 @@ def _build(model: str, api_key: str, base_url: str = ""):
         )
 
     effective_url = base_url or OPENROUTER_BASE_URL
-    print(f"[OPENROUTER] model={model} base_url={effective_url} key={api_key[:8]}...")
 
     return ChatOpenAI(
         model=model,

@@ -122,6 +122,13 @@
       background: #f8fafc !important; border-color: #e2e8f0 !important; color: #111827 !important;
     }
     html:not(.dark) input::placeholder, html:not(.dark) textarea::placeholder { color: #9ca3af !important; }
+    /* Dark mode — ensure selects and inputs are always visible */
+    .dark select, .dark input, .dark textarea {
+      background: rgba(255,255,255,0.05) !important;
+      border-color: rgba(255,255,255,0.1) !important;
+      color: #f3f4f6 !important;
+    }
+    .dark select option { background: #1f2937; color: #f3f4f6; }
     html:not(.dark) .db-tab.active { background: rgba(92,124,250,0.1) !important; }
     html:not(.dark) .sidebar-item:hover { background: rgba(92,124,250,0.08) !important; }
     html:not(.dark) .sidebar-item.active { background: rgba(92,124,250,0.12) !important; }

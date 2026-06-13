@@ -76,7 +76,7 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs text-muted mb-1">Provider</label>
-              <select id="newProvider" class="input-field w-full px-3 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <select id="newProvider" class="input-field w-full px-3 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-white/5 dark:border-white/10 dark:text-gray-100">
                 {% for val, label in provider_choices %}
                 <option value="{{ val }}">{{ label }}</option>
                 {% endfor %}

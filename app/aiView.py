@@ -212,7 +212,6 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
     try:
         response: AIMessage = llm.invoke(messages)
     except Exception as e:
-        print(f"[LLM ERROR] {e}")
         notify("done")
         return {
             "sql": "", "columns": [], "rows": [], "error": str(e),
@@ -222,8 +221,6 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
             ),
         }
 
-    print(f"[LLM RAW RESPONSE] tool_calls={bool(response.tool_calls)}")
-    print(f"[LLM CONTENT PREVIEW] {_extract_text(response.content)[:300]}")
     messages.append(response)
 
     # ── Step 2: resolve SQL ───────────────────────────────────────────────────
@@ -232,11 +229,10 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
     if response.tool_calls:
         tc = response.tool_calls[0]
         tool_call_args = {"query": tc["args"].get("query", "").strip().rstrip(';'), "id": tc["id"]}
-        print(f"[TOOL CALL - structured] SQL: {tool_call_args['query']}")
     else:
         tool_call_args = _extract_tool_call_from_text(_extract_text(response.content))
         if tool_call_args:
-            print(f"[TOOL CALL - text fallback] SQL: {tool_call_args['query']}")
+            pass
 
     if tool_call_args:
         executed_sql = tool_call_args["query"]
@@ -244,7 +240,6 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
 
         first_word = executed_sql.strip().split()[0].upper() if executed_sql.strip() else ""
         if first_word not in ("SELECT", "WITH", "EXPLAIN"):
-            print(f"[BLOCKED] Non-SELECT query: {executed_sql[:120]}")
             notify("done")
             return {
                 "sql": executed_sql, "columns": [], "rows": [],
@@ -254,23 +249,15 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
 
         # ── Step 3: execute SQL ───────────────────────────────────────────────
         notify("querying", executed_sql)
-        print(f"\n[EXECUTING SQL]\n{executed_sql}")
         result      = execute_query(db, executed_sql)
         columns     = result["columns"]
         rows        = result["rows"]
         query_error = result["error"]
 
         if query_error:
-            print(f"[SQL ERROR] {query_error}")
             tool_result_text = f"Error executing query: {query_error}"
         else:
             notify("reading", f"{len(rows)} row{'s' if len(rows) != 1 else ''} returned")
-            print(f"[SQL RESULT] {len(rows)} rows, columns: {columns}")
-            if rows:
-                for r in rows[:5]:
-                    print(f"  {dict(zip(columns, r))}")
-                if len(rows) > 5:
-                    print(f"  ... ({len(rows) - 5} more rows)")
             if not rows:
                 tool_result_text = "Query executed successfully. No rows returned."
             else:
@@ -289,14 +276,11 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
 
         # ── Step 4: summary LLM call ──────────────────────────────────────────
         notify("summarising", "Preparing your answer…")
-        print(f"\n[SUMMARY LLM CALL]")
         try:
             summary_llm = _get_summary_llm()
             final: AIMessage = summary_llm.invoke(messages)
             nl_response = _extract_text(final.content)
-            print(f"[SUMMARY RESPONSE]\n{nl_response}")
         except Exception as e:
-            print(f"[SUMMARY ERROR] {e}")
             nl_response = "Query ran successfully. See the data table below."
 
         if query_error:
@@ -304,11 +288,8 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
 
     else:
         nl_response = _extract_text(response.content)
-        print(f"[CONVERSATIONAL ANSWER]\n{nl_response}")
 
     notify("done")
-    print(f"\n[DONE] sql_executed={bool(executed_sql)} rows={len(rows)} error={bool(query_error)}")
-    print(f"{'='*60}\n")
 
     return {
         "sql":         executed_sql,
