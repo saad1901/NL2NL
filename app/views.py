@@ -13,7 +13,7 @@ import sqlite3
 
 logger = logging.getLogger('app.views')
 
-from .models import DatabaseConnection, QueryHistory, LLMProvider, LLMModel
+from .models import DatabaseConnection, QueryHistory, LLMProvider, LLMModel, DashboardChart
 from .aiTools import fetch_schema
 from .aiView import run_nl_query
 
@@ -511,7 +511,66 @@ def dashboard_chart_view(request, db_id):
     return JsonResponse(result)
 
 
-def clear_history_view(request, db_id):
+def dashboard_charts_list(request, db_id):
+    """Returns all saved charts for a database."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+    charts = DashboardChart.objects.filter(database=db, user=request.user)
+    data = [{
+        'id':         c.id,
+        'title':      c.title,
+        'question':   c.question,
+        'chart_type': c.chart_type,
+        'sql':        c.sql,
+        'labels':     c.chart_data.get('labels', []),
+        'datasets':   c.chart_data.get('datasets', []),
+    } for c in charts]
+    return JsonResponse({'charts': data})
+
+
+@require_POST
+def dashboard_chart_save(request, db_id):
+    """Saves a chart to the database."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid request.'}, status=400)
+
+    chart = DashboardChart.objects.create(
+        database=db,
+        user=request.user,
+        title=data.get('title', 'Chart'),
+        question=data.get('question', ''),
+        chart_type=data.get('chart_type', 'bar'),
+        sql=data.get('sql', ''),
+        chart_data={'labels': data.get('labels', []), 'datasets': data.get('datasets', [])},
+        position=DashboardChart.objects.filter(database=db, user=request.user).count(),
+    )
+    return JsonResponse({'ok': True, 'id': chart.id})
+
+
+@require_POST
+def dashboard_chart_delete(request, db_id, chart_id):
+    """Deletes a saved chart."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    chart = get_object_or_404(DashboardChart, id=chart_id, database__id=db_id, user=request.user)
+    chart.delete()
+    return JsonResponse({'ok': True})
+
+
+def docs_view(request):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+    all_dbs = DatabaseConnection.objects.filter(user=request.user)
+    return render(request, 'docs.html', {'user': request.user, 'all_dbs': all_dbs})
+
+
+def clear_history_view(request, db_id):    
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Unauthenticated'}, status=401)
     db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)

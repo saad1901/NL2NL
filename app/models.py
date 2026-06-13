@@ -96,3 +96,22 @@ class LLMModel(models.Model):
 
     def __str__(self):
         return f"{self.display_name} ({self.provider.get_provider_display()})"
+
+
+class DashboardChart(models.Model):
+    """Persisted chart for a user's database dashboard."""
+    database   = models.ForeignKey(DatabaseConnection, on_delete=models.CASCADE, related_name='charts')
+    user       = models.ForeignKey(User, on_delete=models.CASCADE)
+    title      = models.CharField(max_length=200)
+    question   = models.TextField()
+    chart_type = models.CharField(max_length=20)
+    sql        = models.TextField()
+    chart_data = models.JSONField()   # {labels: [...], datasets: [...]}
+    position   = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['position', 'created_at']
+
+    def __str__(self):
+        return f"{self.title} — {self.database.label}"

@@ -39,4 +39,8 @@ urlpatterns = [
     path('settings/models/<int:model_id>/delete/', views.delete_model_view, name='delete_model'),
     path('api/models/', views.models_for_chat_view, name='models_for_chat'),
     path('chat/<int:db_id>/dashboard/', views.dashboard_chart_view, name='dashboard_chart'),
+    path('chat/<int:db_id>/dashboard/list/', views.dashboard_charts_list, name='dashboard_charts_list'),
+    path('chat/<int:db_id>/dashboard/save/', views.dashboard_chart_save, name='dashboard_chart_save'),
+    path('chat/<int:db_id>/dashboard/<int:chart_id>/delete/', views.dashboard_chart_delete, name='dashboard_chart_delete'),
+    path('docs/', views.docs_view, name='docs'),
 ]

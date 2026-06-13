@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% block title %}Docs — NL2SQL{% endblock %}
+
+{% block body %}
+<div class="flex h-screen overflow-hidden app-bg">
+
+  <!-- Sidebar -->
+  <aside class="w-56 flex-shrink-0 flex flex-col border-r border-subtle sidebar-bg">
+    <div class="flex items-center gap-2.5 px-4 py-4 border-b border-subtle">
+      <div class="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
+        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <span class="text-base font-bold text-main">NL<span class="text-brand-400">2</span>SQL</span>
+    </div>
+    <nav class="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
+      {% if all_dbs %}
+      <a href="/chat/{{ all_dbs.0.id }}/" class="sidebar-item flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-muted hover:text-main">
+      {% else %}
+      <a href="/dashboard/" class="sidebar-item flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-muted hover:text-main">
+      {% endif %}
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+        Chat
+      </a>
+      <a href="/settings/" class="sidebar-item flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-muted hover:text-main">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        Settings
+      </a>
+      <a href="/docs/" class="sidebar-item active flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-main">
+        <svg class="w-3.5 h-3.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+        Docs
+      </a>
+    </nav>
+    <div class="border-t border-subtle px-3 py-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">
+          {{ user.first_name.0|default:"U" }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-medium text-main truncate">{{ user.get_full_name|default:user.username }}</p>
+          <p class="text-xs text-muted truncate">{{ user.email }}</p>
+        </div>
+        <a href="/logout/" class="text-muted hover:text-main transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-y-auto scrollbar-thin">
+    <header class="flex items-center justify-between px-6 py-4 border-b border-subtle header-bg sticky top-0 z-10">
+      <div>
+        <h1 class="text-base font-semibold text-main">Documentation</h1>
+        <p class="text-xs text-muted">Getting started & free API keys</p>
+      </div>
+      <button onclick="toggleTheme()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 text-muted hover:text-main transition">
+        <svg class="theme-icon-dark w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+        <svg class="theme-icon-light w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="max-w-3xl mx-auto px-6 py-8 space-y-10">
+
+      <!-- Quick start -->
+      <div>
+        <h2 class="text-lg font-bold text-main mb-1">Quick Start</h2>
+        <p class="text-sm text-muted mb-4">NL2SQL lets you query any SQL database using plain English. No SQL knowledge needed.</p>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="glass rounded-xl p-4 text-center">
+            <div class="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center mx-auto mb-2">
+              <span class="text-brand-400 font-bold text-sm">1</span>
+            </div>
+            <p class="text-xs font-medium text-main">Add an API key</p>
+            <p class="text-xs text-muted mt-1">Settings → Providers</p>
+          </div>
+          <div class="glass rounded-xl p-4 text-center">
+            <div class="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center mx-auto mb-2">
+              <span class="text-brand-400 font-bold text-sm">2</span>
+            </div>
+            <p class="text-xs font-medium text-main">Connect a database</p>
+            <p class="text-xs text-muted mt-1">SQL or upload CSV/Excel</p>
+          </div>
+          <div class="glass rounded-xl p-4 text-center">
+            <div class="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center mx-auto mb-2">
+              <span class="text-brand-400 font-bold text-sm">3</span>
+            </div>
+            <p class="text-xs font-medium text-main">Ask a question</p>
+            <p class="text-xs text-muted mt-1">Get answers instantly</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- OpenRouter -->
+      <div class="glass rounded-2xl overflow-hidden">
+        <div class="flex items-center gap-3 px-6 py-4 border-b border-subtle">
+          <div class="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-main">OpenRouter — Free models</h3>
+            <p class="text-xs text-muted">Access dozens of models from one API key, including free tiers</p>
+          </div>
+          <a href="https://openrouter.ai/keys" target="_blank"
+            class="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded-lg transition flex-shrink-0">
+            Get Key
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+          </a>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+          <ol class="space-y-2 text-sm text-muted list-decimal list-inside">
+            <li>Go to <a href="https://openrouter.ai/keys" target="_blank" class="text-brand-400 hover:underline">openrouter.ai/keys</a> and sign up (free)</li>
+            <li>Click <strong class="text-main">Create Key</strong> — copy the key starting with <code class="bg-white/5 px-1 rounded text-xs">sk-or-</code></li>
+            <li>In NL2SQL → <a href="/settings/" class="text-brand-400 hover:underline">Settings</a> → select <strong class="text-main">OpenRouter</strong>, paste the key, click Save</li>
+            <li>Add a model with one of the slugs below</li>
+          </ol>
+
+          <div>
+            <p class="text-xs font-medium text-main mb-2">Recommended free models</p>
+            <div class="space-y-2">
+              {% for slug, label, note in openrouter_models %}
+              <div class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/3 border border-white/8">
+                <div>
+                  <code class="text-xs text-purple-300">{{ slug }}</code>
+                  <p class="text-xs text-muted mt-0.5">{{ label }} · {{ note }}</p>
+                </div>
+                <button onclick="copyToClipboard('{{ slug }}', this)"
+                  class="text-xs text-muted hover:text-brand-400 transition px-2 py-1 rounded hover:bg-white/5 flex-shrink-0 ml-3">
+                  Copy
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gemini -->
+      <div class="glass rounded-2xl overflow-hidden">
+        <div class="flex items-center gap-3 px-6 py-4 border-b border-subtle">
+          <div class="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center">
+            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-main">Google Gemini — AI Studio</h3>
+            <p class="text-xs text-muted">Free API key from Google AI Studio, generous rate limits</p>
+          </div>
+          <a href="https://aistudio.google.com/apikey" target="_blank"
+            class="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition flex-shrink-0">
+            Get Key
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+          </a>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+          <ol class="space-y-2 text-sm text-muted list-decimal list-inside">
+            <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" class="text-brand-400 hover:underline">aistudio.google.com/apikey</a></li>
+            <li>Sign in with your Google account</li>
+            <li>Click <strong class="text-main">Create API Key</strong> — copy it</li>
+            <li>In NL2SQL → <a href="/settings/" class="text-brand-400 hover:underline">Settings</a> → select <strong class="text-main">Google Gemini</strong>, paste the key, click Save</li>
+            <li>Add a model with one of the slugs below</li>
+          </ol>
+          <div>
+            <p class="text-xs font-medium text-main mb-2">Recommended models</p>
+            <div class="space-y-2">
+              {% for slug, label, note in gemini_models %}
+              <div class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/3 border border-white/8">
+                <div>
+                  <code class="text-xs text-blue-300">{{ slug }}</code>
+                  <p class="text-xs text-muted mt-0.5">{{ label }} · {{ note }}</p>
+                </div>
+                <button onclick="copyToClipboard('{{ slug }}', this)"
+                  class="text-xs text-muted hover:text-brand-400 transition px-2 py-1 rounded hover:bg-white/5 flex-shrink-0 ml-3">
+                  Copy
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tips -->
+      <div class="glass rounded-2xl p-6">
+        <h3 class="text-sm font-semibold text-main mb-3">Tips for better results</h3>
+        <ul class="space-y-2 text-sm text-muted">
+          <li class="flex items-start gap-2"><span class="text-brand-400 mt-0.5">→</span> When adding a database, fill in the <strong class="text-main">Schema Description</strong> — it helps the AI write more accurate queries.</li>
+          <li class="flex items-start gap-2"><span class="text-brand-400 mt-0.5">→</span> Be specific: "Show me monthly revenue for Q1 2024" works better than "show revenue".</li>
+          <li class="flex items-start gap-2"><span class="text-brand-400 mt-0.5">→</span> Use the <strong class="text-main">Dashboard</strong> button to generate charts — ask things like "bar chart of top 10 products by sales".</li>
+          <li class="flex items-start gap-2"><span class="text-brand-400 mt-0.5">→</span> CSV/Excel files are automatically converted to SQLite — each sheet becomes a table.</li>
+          <li class="flex items-start gap-2"><span class="text-brand-400 mt-0.5">→</span> Toggle <strong class="text-main">Show SQL</strong> to see the exact query that was run.</li>
+        </ul>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+function copyToClipboard(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('text-green-400');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('text-green-400'); }, 1500);
+  });
+}
+</script>
+{% endblock %}
