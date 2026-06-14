@@ -3,9 +3,47 @@
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 <style>
   .chat-bubble-user { background: linear-gradient(135deg, #4c6ef5, #7c3aed); }
   .chat-bubble-ai { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+  /* Markdown rendered inside AI bubbles */
+  .md-body p  { margin: 0 0 .5em; }
+  .md-body p:last-child { margin-bottom: 0; }
+  .md-body strong { color: #e5e7eb; font-weight: 600; }
+  .md-body em     { color: #d1d5db; font-style: italic; }
+  .md-body h1,.md-body h2,.md-body h3 { color: #f3f4f6; font-weight: 600; margin: .75em 0 .4em; line-height: 1.3; }
+  .md-body h1 { font-size: 1.05rem; }
+  .md-body h2 { font-size: .95rem; }
+  .md-body h3 { font-size: .875rem; }
+  .md-body ul,.md-body ol { padding-left: 1.4em; margin: .4em 0; }
+  .md-body li  { margin: .2em 0; }
+  .md-body code { font-family: 'JetBrains Mono', monospace; font-size: .78rem;
+                  background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.07);
+                  border-radius: 4px; padding: 1px 5px; color: #a5b4fc; }
+  .md-body pre  { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.07);
+                  border-radius: 10px; padding: 12px 16px; overflow-x: auto;
+                  margin: .5em 0; }
+  .md-body pre code { background: none; border: none; padding: 0; color: #e5e7eb; font-size: .78rem; }
+  .md-body blockquote { border-left: 3px solid rgba(92,124,250,.5); padding-left: .75em;
+                        margin: .5em 0; color: #9ca3af; }
+  .md-body hr  { border: none; border-top: 1px solid rgba(255,255,255,.08); margin: .75em 0; }
+  /* Markdown tables */
+  .md-body table { width: 100%; border-collapse: collapse; font-size: .82rem; margin: .5em 0; }
+  .md-body th   { color: #6b7280; font-size: .68rem; text-transform: uppercase; letter-spacing: .05em;
+                  padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.1); text-align: left; font-weight: 600; }
+  .md-body td   { padding: 7px 12px; border-top: 1px solid rgba(255,255,255,.05); color: #e5e7eb; }
+  .md-body tr:hover td { background: rgba(92,124,250,.05); }
+  /* Light theme overrides for md-body */
+  html:not(.dark) .md-body strong { color: #111827; }
+  html:not(.dark) .md-body em     { color: #374151; }
+  html:not(.dark) .md-body h1,html:not(.dark) .md-body h2,html:not(.dark) .md-body h3 { color: #111827; }
+  html:not(.dark) .md-body code   { background: #f1f5f9; border-color: #e2e8f0; color: #4f46e5; }
+  html:not(.dark) .md-body pre    { background: #f8fafc; border-color: #e2e8f0; }
+  html:not(.dark) .md-body pre code { color: #374151; }
+  html:not(.dark) .md-body td     { color: #111827; }
+  html:not(.dark) .md-body th     { color: #6b7280; border-color: #e2e8f0; }
+  html:not(.dark) .md-body tr:hover td { background: rgba(92,124,250,.04); }
   .typing-dot { width:6px;height:6px;border-radius:50%;background:#5c7cfa;animation:typingBounce 1.2s ease-in-out infinite; }
   .typing-dot:nth-child(2){animation-delay:.2s}
   .typing-dot:nth-child(3){animation-delay:.4s}
@@ -348,9 +386,8 @@
           </svg>
         </div>
         <div class="flex-1 max-w-4xl space-y-2">
-          <div class="chat-bubble-ai rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-200 leading-relaxed">
-            {{ entry.nl_response|safe }}
-          </div>
+          <div class="chat-bubble-ai md-body rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-200 leading-relaxed"
+               data-md="{{ entry.nl_response|escapejs }}"></div>
           {% if entry.result_columns and entry.result_rows %}
           <div class="rounded-xl overflow-hidden border border-white/8 bg-black/20 overflow-x-auto">
             <table class="result-table w-full text-sm">
@@ -1085,7 +1122,7 @@ function appendAI(data) {
   // If there's an error, style the bubble differently and show a badge
   const bubbleClass = hasError
     ? 'chat-bubble-ai rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed border border-red-500/20 bg-red-500/5'
-    : 'chat-bubble-ai rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-200 leading-relaxed';
+    : 'chat-bubble-ai md-body rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-200 leading-relaxed';
 
   const errorBadge = hasError ? `
     <div class="flex items-center gap-1.5 text-xs text-red-400 mb-2">
@@ -1095,7 +1132,8 @@ function appendAI(data) {
       <span class="font-medium">Could not complete request</span>
     </div>` : '';
 
-  const responseColor = hasError ? 'text-red-300' : 'text-gray-200';
+  const responseColor = hasError ? 'text-red-300' : '';
+  const responseContent = hasError ? `<span class="${responseColor}">${esc(data.nl_response)}</span>` : renderMd(data.nl_response);
 
   d.innerHTML = `
     <div class="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -1106,7 +1144,7 @@ function appendAI(data) {
     <div class="flex-1 max-w-4xl space-y-2">
       <div class="${bubbleClass}">
         ${errorBadge}
-        <span class="${responseColor}">${data.nl_response}</span>
+        ${responseContent}
       </div>
       ${tableHtml}
       ${data.generated_sql ? `<div class="sql-section ${sqlClass}"><div class="sql-block text-gray-300">${esc(data.generated_sql)}</div></div>` : ''}
@@ -1204,6 +1242,19 @@ function getCookie(name) {
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+// ── Markdown renderer ─────────────────────────────────────────
+function renderMd(text) {
+  if (!text) return '';
+  if (typeof marked === 'undefined') return esc(text);  // fallback if CDN failed
+  // Configure marked: no built-in sanitiser needed — we don't execute scripts,
+  // but we do strip any <script> tags defensively.
+  marked.setOptions({ breaks: true, gfm: true });
+  const html = marked.parse(String(text));
+  // Strip script/iframe tags for safety (LLM output is untrusted)
+  return html.replace(/<script[\s\S]*?<\/script>/gi, '')
+             .replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
+}
 function copyText(text, btn) {
   navigator.clipboard.writeText(text).then(() => {
     const orig = btn.textContent;
@@ -1257,6 +1308,11 @@ window.addEventListener('load', () => {
   if (!NEEDS_CREDS) disableInput('Loading models…');
   loadModels();
   scrollBottom();
+  // Render Markdown in server-rendered history bubbles
+  document.querySelectorAll('[data-md]').forEach(el => {
+    el.innerHTML = renderMd(el.dataset.md);
+    delete el.dataset.md;
+  });
 });
 </script>
 
