@@ -2,7 +2,7 @@
 {% block title %}{{ active_db.label }} — NL2SQL{% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <style>
   .chat-bubble-user { background: linear-gradient(135deg, #4c6ef5, #7c3aed); }
   .chat-bubble-ai { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
@@ -23,6 +23,20 @@
   #dashboardPanel { transition: transform .3s ease, opacity .3s ease; }
   #dashboardPanel.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
   .chart-card { break-inside: avoid; }
+
+  /* Chart skeleton loader */
+  .chart-skeleton { animation: skeletonPulse 1.5s ease-in-out infinite; }
+  @keyframes skeletonPulse { 0%,100%{opacity:.4} 50%{opacity:.8} }
+
+  /* Dashboard error toast */
+  #dashboardError { transition: opacity .25s ease, transform .25s ease; }
+  #dashboardError.hidden { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+
+  /* Chart expand modal */
+  #chartExpandModal { transition: opacity .2s ease; }
+  #chartExpandModal.hidden { opacity: 0; pointer-events: none; }
+  #chartExpandPanel { transition: transform .25s ease, opacity .25s ease; }
+  #chartExpandModal.hidden #chartExpandPanel { transform: scale(.96); opacity: 0; }
 
   /* Credentials banner */
   .cred-tab { transition: all .15s ease; }
@@ -366,6 +380,14 @@
           <div class="sql-section hidden">
             <div class="sql-block text-gray-300">{{ entry.generated_sql }}</div>
           </div>
+          <div class="flex items-center gap-2">
+            <button onclick="toggleSql(this)" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-600 hover:text-brand-400 hover:bg-brand-500/5 transition">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+              </svg>
+              <span>View SQL</span>
+            </button>
+          </div>
           {% endif %}
           {% if entry.error %}
           <div class="flex items-center gap-2 text-xs text-red-400 px-1">
@@ -440,6 +462,20 @@
 
   <!-- Chart input -->
   <div class="flex-shrink-0 px-6 py-4 border-b border-white/5 bg-gray-900/30">
+
+    <!-- Error toast -->
+    <div id="dashboardError" class="hidden mb-3 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300">
+      <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span id="dashboardErrorText"></span>
+      <button onclick="hideDashboardError()" class="ml-auto text-red-400 hover:text-red-200 transition">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
     <div class="flex items-center gap-3">
       <input id="chartQuestion" type="text"
         placeholder="e.g. Monthly revenue trend, Top 10 customers by sales, Revenue by category…"
@@ -480,6 +516,54 @@
 
     <!-- Charts injected here as 2-column grid -->
     <div id="chartsContainer" class="hidden grid grid-cols-1 xl:grid-cols-2 gap-5"></div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     CHART EXPAND MODAL
+═══════════════════════════════════════════════════════════════ -->
+<div id="chartExpandModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
+     style="background:rgba(0,0,0,0.75);backdrop-filter:blur(6px)"
+     onclick="if(event.target===this) closeExpandModal()">
+
+  <div id="chartExpandPanel"
+       class="relative w-full flex flex-col rounded-2xl overflow-hidden"
+       style="max-width:1200px;height:85vh;background:rgba(10,12,20,0.97);border:1px solid rgba(255,255,255,0.1);box-shadow:0 32px 80px rgba(0,0,0,0.6)">
+
+    <!-- Modal header -->
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5 flex-shrink-0">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span id="expandModalIcon" class="text-lg leading-none"></span>
+        <span id="expandModalBadge" class="tag text-xs capitalize flex-shrink-0"></span>
+        <h2 id="expandModalTitle" class="text-sm font-semibold text-white truncate"></h2>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0 ml-3">
+        <!-- SQL toggle -->
+        <button onclick="toggleExpandSql()" id="expandSqlBtn"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 transition">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+          </svg>
+          <span id="expandSqlBtnLabel">View SQL</span>
+        </button>
+        <!-- Close -->
+        <button onclick="closeExpandModal()"
+          class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition" title="Close (Esc)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- SQL block (hidden by default) -->
+    <div id="expandSqlBlock" class="hidden flex-shrink-0 px-5 py-3 border-b border-white/5 bg-black/20">
+      <pre id="expandSqlText" class="sql-block text-gray-400 text-xs whitespace-pre-wrap break-all max-h-32 overflow-y-auto scrollbar-thin"></pre>
+    </div>
+
+    <!-- Chart fills remaining space -->
+    <div id="expandChartEl" class="flex-1 min-h-0" style="padding:12px 8px"></div>
 
   </div>
 </div>
@@ -783,11 +867,13 @@ function toggleDevMode() {
     thumb.classList.add('translate-x-4');
     thumb.classList.replace('bg-gray-500', 'bg-white');
     document.querySelectorAll('.sql-section').forEach(el => el.classList.remove('hidden'));
+    document.querySelectorAll('button[onclick="toggleSql(this)"] span').forEach(el => el.textContent = 'Hide SQL');
   } else {
     toggle.classList.replace('bg-brand-600', 'bg-white/10');
     thumb.classList.remove('translate-x-4');
     thumb.classList.replace('bg-white', 'bg-gray-500');
     document.querySelectorAll('.sql-section').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('button[onclick="toggleSql(this)"] span').forEach(el => el.textContent = 'View SQL');
   }
 }
 
@@ -994,6 +1080,22 @@ function appendAI(data) {
 
   const tableHtml = buildTable(data);
   const sqlClass  = devMode ? '' : 'hidden';
+  const hasError  = data.error && data.error !== '';
+
+  // If there's an error, style the bubble differently and show a badge
+  const bubbleClass = hasError
+    ? 'chat-bubble-ai rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed border border-red-500/20 bg-red-500/5'
+    : 'chat-bubble-ai rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-200 leading-relaxed';
+
+  const errorBadge = hasError ? `
+    <div class="flex items-center gap-1.5 text-xs text-red-400 mb-2">
+      <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span class="font-medium">Could not complete request</span>
+    </div>` : '';
+
+  const responseColor = hasError ? 'text-red-300' : 'text-gray-200';
 
   d.innerHTML = `
     <div class="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -1002,19 +1104,21 @@ function appendAI(data) {
       </svg>
     </div>
     <div class="flex-1 max-w-4xl space-y-2">
-      <div class="chat-bubble-ai rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-200 leading-relaxed">
-        ${data.nl_response}
+      <div class="${bubbleClass}">
+        ${errorBadge}
+        <span class="${responseColor}">${data.nl_response}</span>
       </div>
       ${tableHtml}
       ${data.generated_sql ? `<div class="sql-section ${sqlClass}"><div class="sql-block text-gray-300">${esc(data.generated_sql)}</div></div>` : ''}
+      ${data.generated_sql ? `
       <div class="flex items-center gap-2">
         <button onclick="toggleSql(this)" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-600 hover:text-brand-400 hover:bg-brand-500/5 transition">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
           </svg>
-          ${devMode ? 'Hide SQL' : 'View SQL'}
+          <span>${devMode ? 'Hide SQL' : 'View SQL'}</span>
         </button>
-      </div>
+      </div>` : ''}
     </div>`;
   c.appendChild(d);
 }
@@ -1089,7 +1193,8 @@ function toggleSql(btn) {
   const section = bubble.querySelector('.sql-section');
   if (!section) return;
   section.classList.toggle('hidden');
-  btn.querySelector('svg').nextSibling.textContent = section.classList.contains('hidden') ? ' View SQL' : ' Hide SQL';
+  const label = btn.querySelector('span');
+  if (label) label.textContent = section.classList.contains('hidden') ? 'View SQL' : 'Hide SQL';
 }
 
 function getCookie(name) {
@@ -1157,31 +1262,33 @@ window.addEventListener('load', () => {
 
 <script>
 // ══════════════════════════════════════════════════════════════
-//  DASHBOARD  —  persistent charts with rich visuals
+//  DASHBOARD  —  Apache ECharts, persisted charts
 // ══════════════════════════════════════════════════════════════
-const chartInstances = {};   // canvasId -> Chart instance
-const chartDbIds    = {};    // canvasId -> DashboardChart.id (DB pk)
+const echartsInstances = {};  // divId -> ECharts instance
+const chartDbIds = {};        // divId -> DashboardChart.id
+const chartQuestions = {};    // divId -> original question (for refresh)
+let currentEChartsTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 
-// Vivid gradient palette for datasets
-const PALETTE = [
-  ['#818cf8','#6366f1'],['#34d399','#059669'],['#f472b6','#db2777'],
-  ['#fb923c','#ea580c'],['#38bdf8','#0284c7'],['#facc15','#d97706'],
-  ['#a78bfa','#7c3aed'],['#4ade80','#16a34a'],
-];
-
-function _makeGradient(ctx, hex1, hex2, vertical=true) {
-  const g = vertical
-    ? ctx.createLinearGradient(0, 0, 0, 320)
-    : ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
-  g.addColorStop(0,   hex1 + 'cc');
-  g.addColorStop(1,   hex2 + '33');
-  return g;
+// ── Error helpers ─────────────────────────────────────────────
+function showDashboardError(msg) {
+  const el = document.getElementById('dashboardError');
+  document.getElementById('dashboardErrorText').textContent = msg;
+  el.classList.remove('hidden');
+}
+function hideDashboardError() {
+  document.getElementById('dashboardError').classList.add('hidden');
 }
 
+// ── Open / Close ──────────────────────────────────────────────
 function openDashboard() {
+  hideDashboardError();
   document.getElementById('dashboardPanel').classList.remove('hidden');
   document.getElementById('chartQuestion').focus();
   loadSavedCharts();
+  // Resize all charts after the panel's CSS transition completes
+  setTimeout(() => {
+    Object.values(echartsInstances).forEach(c => { try { c.resize(); } catch(e){} });
+  }, 350);
 }
 function closeDashboard() {
   document.getElementById('dashboardPanel').classList.add('hidden');
@@ -1191,38 +1298,107 @@ function useChartExample(btn) {
   document.getElementById('chartQuestion').focus();
 }
 
-// ── Load persisted charts from server ────────────────────────
+// ── ECharts theme sync ────────────────────────────────────────
+// Called from base.html's toggleTheme() after the DOM class changes
+function syncEChartsTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  const newTheme = isDark ? 'dark' : 'light';
+  if (newTheme === currentEChartsTheme) return;
+  currentEChartsTheme = newTheme;
+
+  // Re-initialise every chart with the new theme
+  Object.keys(echartsInstances).forEach(divId => {
+    const el = document.getElementById(divId);
+    const oldChart = echartsInstances[divId];
+    if (!el || !oldChart) return;
+    const option = oldChart.getOption();
+    oldChart.dispose();
+    const newChart = echarts.init(el, newTheme === 'dark' ? 'dark' : null, { renderer: 'canvas' });
+    // Patch title colour for current theme
+    if (option.title && option.title[0]) {
+      option.title[0].textStyle = {
+        ...option.title[0].textStyle,
+        color: isDark ? '#e5e7eb' : '#111827',
+      };
+    }
+    newChart.setOption(option);
+    echartsInstances[divId] = newChart;
+  });
+}
+
+// Patch base.html's toggleTheme to also sync ECharts
+const _origToggleTheme = window.toggleTheme;
+window.toggleTheme = function() {
+  _origToggleTheme && _origToggleTheme();
+  syncEChartsTheme();
+};
+
+// ── Load persisted charts ─────────────────────────────────────
 async function loadSavedCharts() {
+  // Collect which DB chart IDs are already rendered so we don't duplicate
+  const alreadyRendered = new Set(Object.values(chartDbIds));
+
   try {
     const res  = await fetch(`/chat/${DB_ID}/dashboard/list/`);
     const data = await res.json();
     if (data.charts && data.charts.length) {
-      data.charts.forEach(c => renderChart(c, c.id));
+      data.charts.forEach(c => {
+        if (!alreadyRendered.has(c.id)) {
+          renderChart(c, c.id);
+        }
+      });
     }
-  } catch(e) { console.error('Failed to load charts', e); }
+  } catch(e) {
+    console.error('Failed to load charts', e);
+    showDashboardError('Could not load saved charts. Please refresh the page.');
+  }
 }
 
-// ── Generate + save new chart ─────────────────────────────────
+// ── Generate + save ───────────────────────────────────────────
 async function addChart() {
   const input = document.getElementById('chartQuestion');
   const question = input.value.trim();
   if (!question) return;
+  hideDashboardError();
+  _generateChart(question, null);
+  input.value = '';
+}
 
+async function refreshChart(divId) {
+  const question = chartQuestions[divId];
+  if (!question) return;
+  // Remove old card and re-generate
+  const oldDbId = chartDbIds[divId];
+  await removeChart(divId, /*skipApiDelete=*/false);
+  _generateChart(question, null);
+}
+
+async function _generateChart(question, existingDivId) {
   const btn = document.getElementById('addChartBtn');
   btn.disabled = true;
   btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> Generating…`;
 
+  // Show skeleton placeholder in the grid while generating
+  const skeletonId = 'skeleton_' + Date.now();
+  _insertSkeleton(skeletonId, question);
+
   try {
-    // 1. Generate chart spec via LLM
     const genRes = await fetch(`/chat/${DB_ID}/dashboard/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
       body: JSON.stringify({ question, model_id: selectedModelId }),
     });
     const chartData = await genRes.json();
-    if (chartData.error) { alert('Chart error: ' + chartData.error); return; }
 
-    // 2. Save to DB
+    // Remove skeleton
+    document.getElementById('skel_' + skeletonId)?.remove();
+
+    if (chartData.error) {
+      showDashboardError(chartData.error);
+      _checkEmptyState();
+      return;
+    }
+
     const saveRes = await fetch(`/chat/${DB_ID}/dashboard/save/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
@@ -1230,58 +1406,121 @@ async function addChart() {
     });
     const saved = await saveRes.json();
 
-    // 3. Render
-    renderChart(chartData, saved.id);
-    input.value = '';
+    renderChart(chartData, saved.id, question);
+
   } catch(e) {
-    alert('Network error. Please try again.');
+    document.getElementById('skel_' + skeletonId)?.remove();
+    showDashboardError('Network error generating chart. Please try again.');
+    _checkEmptyState();
+    console.error(e);
   } finally {
     btn.disabled = false;
     btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add Chart`;
   }
 }
 
-// ── Render a chart card ───────────────────────────────────────
-function renderChart(data, dbId) {
+// Insert a loading skeleton card
+function _insertSkeleton(skeletonId, question) {
   document.getElementById('dashboardEmpty').classList.add('hidden');
   const container = document.getElementById('chartsContainer');
   container.classList.remove('hidden');
 
-  const canvasId = 'chart_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
-  if (dbId) chartDbIds[canvasId] = dbId;
+  const card = document.createElement('div');
+  card.id = 'skel_' + skeletonId;
+  card.className = 'rounded-2xl overflow-hidden';
+  card.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08)';
+  card.innerHTML = `
+    <div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="chart-skeleton w-5 h-5 rounded-md bg-white/10"></div>
+        <div class="chart-skeleton w-12 h-4 rounded-full bg-white/10"></div>
+        <div class="chart-skeleton w-36 h-4 rounded bg-white/10"></div>
+      </div>
+      <div class="chart-skeleton w-4 h-4 rounded bg-white/10 ml-2"></div>
+    </div>
+    <div class="p-4" style="height:300px">
+      <div class="flex flex-col items-center justify-center h-full gap-3 text-gray-600">
+        <svg class="w-5 h-5 animate-spin text-purple-400" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-xs text-gray-500">Generating chart for "${question.length > 40 ? question.slice(0,40)+'…' : question}"</span>
+      </div>
+    </div>`;
+  container.appendChild(card);
+}
 
-  // Chart type badge color
-  const typeColors = {
-    bar:'bg-indigo-500/20 text-indigo-300', line:'bg-green-500/20 text-green-300',
-    pie:'bg-pink-500/20 text-pink-300', doughnut:'bg-pink-500/20 text-pink-300',
-    scatter:'bg-orange-500/20 text-orange-300',
+// ── Render one chart card with ECharts ────────────────────────
+function renderChart(data, dbId, question) {
+  document.getElementById('dashboardEmpty').classList.add('hidden');
+  const container = document.getElementById('chartsContainer');
+  container.classList.remove('hidden');
+
+  const divId = 'echart_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
+  if (dbId) chartDbIds[divId] = dbId;
+  if (question || data.question) chartQuestions[divId] = question || data.question;
+
+  const typeIcons = {
+    bar:     '📊', line: '📈', pie: '🥧', scatter: '✦',
+    radar:   '🕸', funnel: '⬇', heatmap: '🌡',
   };
-  const badgeCls = typeColors[data.chart_type] || 'bg-purple-500/20 text-purple-300';
+  const typeBadges = {
+    bar:     'bg-indigo-500/20 text-indigo-300',
+    line:    'bg-emerald-500/20 text-emerald-300',
+    pie:     'bg-pink-500/20 text-pink-300',
+    scatter: 'bg-orange-500/20 text-orange-300',
+    radar:   'bg-purple-500/20 text-purple-300',
+    funnel:  'bg-cyan-500/20 text-cyan-300',
+    heatmap: 'bg-yellow-500/20 text-yellow-300',
+  };
+  const badge = typeBadges[data.chart_type] || 'bg-gray-500/20 text-gray-300';
+  const icon  = typeIcons[data.chart_type] || '📊';
 
   const card = document.createElement('div');
-  card.className = 'chart-card rounded-2xl overflow-hidden fade-in';
-  card.id = 'card_' + canvasId;
-  card.style.background = 'rgba(255,255,255,0.03)';
-  card.style.border = '1px solid rgba(255,255,255,0.07)';
-  card.style.backdropFilter = 'blur(12px)';
+  card.id = 'card_' + divId;
+  card.className = 'fade-in rounded-2xl overflow-hidden';
+  card.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(12px)';
+  // Store metadata for the expand modal
+  card.dataset.chartType = data.chart_type;
+  card.dataset.chartTitle = data.title;
+  card.dataset.chartSql   = data.sql;
+
   card.innerHTML = `
-    <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
-      <div class="flex items-center gap-2.5 min-w-0">
-        <span class="tag ${badgeCls} capitalize text-xs flex-shrink-0">${esc(data.chart_type)}</span>
+    <div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-base leading-none">${icon}</span>
+        <span class="tag ${badge} capitalize text-xs flex-shrink-0">${esc(data.chart_type)}</span>
         <p class="text-sm font-semibold text-white truncate">${esc(data.title)}</p>
       </div>
-      <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+      <div class="flex items-center gap-1 flex-shrink-0 ml-2">
+        <!-- SQL viewer -->
         <details class="relative">
-          <summary class="text-gray-600 hover:text-gray-300 transition cursor-pointer list-none px-1">
+          <summary class="list-none cursor-pointer w-6 h-6 flex items-center justify-center rounded-lg text-gray-600 hover:text-gray-300 hover:bg-white/5 transition" title="View SQL">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
             </svg>
           </summary>
           <div class="absolute right-0 top-full mt-1 w-80 z-50 rounded-xl border border-white/10 bg-gray-900 shadow-2xl p-3">
-            <pre class="sql-block text-gray-400 text-xs whitespace-pre-wrap">${esc(data.sql)}</pre>
+            <p class="text-xs text-gray-500 mb-1">SQL</p>
+            <pre class="sql-block text-gray-400 text-xs whitespace-pre-wrap break-all">${esc(data.sql)}</pre>
           </div>
         </details>
-        <button onclick="removeChart('${canvasId}')" title="Delete chart"
+        <!-- Expand -->
+        <button onclick="expandChart('${divId}')" title="Expand chart"
+          class="w-6 h-6 flex items-center justify-center rounded-lg text-gray-600 hover:text-purple-400 hover:bg-purple-500/10 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+          </svg>
+        </button>
+        <!-- Refresh -->
+        <button onclick="refreshChart('${divId}')" title="Refresh chart"
+          class="w-6 h-6 flex items-center justify-center rounded-lg text-gray-600 hover:text-blue-400 hover:bg-blue-500/10 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+        <!-- Delete -->
+        <button onclick="removeChart('${divId}')" title="Remove chart"
           class="w-6 h-6 flex items-center justify-center rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -1289,142 +1528,180 @@ function renderChart(data, dbId) {
         </button>
       </div>
     </div>
-    <div class="px-4 pb-4 pt-3" style="position:relative;height:300px">
-      <canvas id="${canvasId}"></canvas>
-    </div>`;
+    <div id="${divId}" style="height:300px;width:100%;padding:8px 4px"></div>`;
+
   container.appendChild(card);
 
-  _initChart(canvasId, data);
-}
+  // Init ECharts after DOM insert
+  requestAnimationFrame(() => {
+    const el = document.getElementById(divId);
+    if (!el) return;
+    if (echartsInstances[divId]) echartsInstances[divId].dispose();
 
-function _initChart(canvasId, data) {
-  if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+    const isDark = document.documentElement.classList.contains('dark');
+    const chart = echarts.init(el, isDark ? 'dark' : null, { renderer: 'canvas' });
 
-  const isDark   = document.documentElement.classList.contains('dark');
-  const gridClr  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-  const tickClr  = isDark ? '#6b7280' : '#9ca3af';
-  const canvas   = document.getElementById(canvasId);
-  const ctx      = canvas.getContext('2d');
+    const opt = data.echarts_option || {};
+    // Patch title colour for current theme
+    if (opt.title) {
+      opt.title.textStyle = {
+        ...opt.title.textStyle,
+        color: isDark ? '#e5e7eb' : '#111827',
+      };
+    }
+    // Set transparent background so the card background shows
+    if (!opt.backgroundColor) opt.backgroundColor = 'transparent';
 
-  // Enrich datasets with gradients + colors
-  const enriched = data.datasets.map((ds, i) => {
-    const [c1, c2] = PALETTE[i % PALETTE.length];
-    const isPolar  = ['pie','doughnut'].includes(data.chart_type);
-    const isLine   = data.chart_type === 'line';
+    chart.setOption(opt);
+    echartsInstances[divId] = chart;
 
-    return {
-      ...ds,
-      backgroundColor: isPolar
-        ? data.labels.map((_, li) => PALETTE[li % PALETTE.length][0] + 'cc')
-        : isLine
-          ? _makeGradient(ctx, c1, c2)
-          : c1 + 'cc',
-      borderColor:     isPolar ? data.labels.map((_, li) => PALETTE[li % PALETTE.length][0]) : c1,
-      borderWidth:     2,
-      pointBackgroundColor: c1,
-      pointRadius:     isLine ? 3 : 0,
-      pointHoverRadius: 5,
-      fill:            isLine,
-      tension:         0.4,
-    };
-  });
-
-  const isPolarChart = ['pie','doughnut'].includes(data.chart_type);
-
-  chartInstances[canvasId] = new Chart(ctx, {
-    type: data.chart_type,
-    data: { labels: data.labels, datasets: enriched },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 800, easing: 'easeInOutQuart' },
-      plugins: {
-        legend: {
-          display: enriched.length > 1 || isPolarChart,
-          labels: {
-            color: tickClr,
-            font: { family: 'Inter', size: 11 },
-            padding: 16,
-            usePointStyle: true,
-            pointStyleWidth: 8,
-          },
-          position: isPolarChart ? 'right' : 'top',
-        },
-        tooltip: {
-          mode: isPolarChart ? 'point' : 'index',
-          intersect: false,
-          backgroundColor: 'rgba(15,15,25,0.9)',
-          titleColor: '#f3f4f6',
-          bodyColor: '#9ca3af',
-          borderColor: 'rgba(255,255,255,0.08)',
-          borderWidth: 1,
-          padding: 10,
-          cornerRadius: 8,
-          callbacks: {
-            label: ctx => {
-              const v = ctx.parsed.y ?? ctx.parsed;
-              return ` ${ctx.dataset.label || ''}: ${typeof v === 'number' ? v.toLocaleString() : v}`;
-            },
-          },
-        },
-      },
-      scales: isPolarChart ? {} : {
-        x: {
-          ticks: { color: tickClr, font: { size: 10 }, maxRotation: 40, maxTicksLimit: 12 },
-          grid: { color: gridClr },
-          border: { color: gridClr },
-        },
-        y: {
-          ticks: {
-            color: tickClr, font: { size: 10 },
-            callback: v => typeof v === 'number' && v >= 1000 ? v.toLocaleString() : v,
-          },
-          grid: { color: gridClr },
-          border: { color: gridClr },
-        },
-      },
-    },
+    // Resize on window resize
+    window._ecResizeHandlers = window._ecResizeHandlers || {};
+    window._ecResizeHandlers[divId] = () => chart.resize();
+    window.addEventListener('resize', window._ecResizeHandlers[divId]);
   });
 }
 
-// ── Delete chart (DOM + DB) ───────────────────────────────────
-async function removeChart(canvasId) {
-  if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); delete chartInstances[canvasId]; }
-  document.getElementById('card_' + canvasId)?.remove();
+// ── Check / toggle empty state ────────────────────────────────
+function _checkEmptyState() {
+  const container = document.getElementById('chartsContainer');
+  const empty     = document.getElementById('dashboardEmpty');
+  const hasCards  = container.children.length > 0;
+  container.classList.toggle('hidden', !hasCards);
+  empty.classList.toggle('hidden', hasCards);
+}
 
-  const dbId = chartDbIds[canvasId];
-  if (dbId) {
-    delete chartDbIds[canvasId];
-    await fetch(`/chat/${DB_ID}/dashboard/${dbId}/delete/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+// ── Delete ────────────────────────────────────────────────────
+async function removeChart(divId, skipApiDelete) {
+  if (echartsInstances[divId]) {
+    if (window._ecResizeHandlers?.[divId]) {
+      window.removeEventListener('resize', window._ecResizeHandlers[divId]);
+      delete window._ecResizeHandlers[divId];
+    }
+    echartsInstances[divId].dispose();
+    delete echartsInstances[divId];
+  }
+  delete chartQuestions[divId];
+  document.getElementById('card_' + divId)?.remove();
+
+  const dbId = chartDbIds[divId];
+  if (dbId && !skipApiDelete) {
+    delete chartDbIds[divId];
+    fetch(`/chat/${DB_ID}/dashboard/${dbId}/delete/`, {
+      method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') },
     }).catch(() => {});
   }
 
-  if (!document.getElementById('chartsContainer').children.length) {
-    document.getElementById('chartsContainer').classList.add('hidden');
-    document.getElementById('dashboardEmpty').classList.remove('hidden');
-  }
+  _checkEmptyState();
 }
 
 // ── Clear all ─────────────────────────────────────────────────
 async function clearDashboard() {
   if (!confirm('Delete all charts from this dashboard?')) return;
+  hideDashboardError();
   const cards = [...document.getElementById('chartsContainer').children];
   for (const card of cards) {
-    const canvasId = card.id.replace('card_', '');
-    if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); delete chartInstances[canvasId]; }
-    const dbId = chartDbIds[canvasId];
-    if (dbId) {
-      delete chartDbIds[canvasId];
-      await fetch(`/chat/${DB_ID}/dashboard/${dbId}/delete/`, {
-        method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') },
-      }).catch(() => {});
-    }
+    const divId = card.id.replace('card_', '');
+    if (divId && divId !== card.id) await removeChart(divId);
   }
-  document.getElementById('chartsContainer').innerHTML = '';
-  document.getElementById('chartsContainer').classList.add('hidden');
-  document.getElementById('dashboardEmpty').classList.remove('hidden');
+  _checkEmptyState();
 }
+
+// ── Expand modal ──────────────────────────────────────────────
+let _expandChart = null;  // the ECharts instance inside the modal
+
+function expandChart(divId) {
+  const sourceChart = echartsInstances[divId];
+  const card = document.getElementById('card_' + divId);
+  if (!sourceChart || !card) return;
+
+  // Populate header metadata from card dataset
+  const typeIcons = { bar:'📊', line:'📈', pie:'🥧', scatter:'✦', radar:'🕸', funnel:'⬇', heatmap:'🌡' };
+  const typeBadges = {
+    bar:'bg-indigo-500/20 text-indigo-300', line:'bg-emerald-500/20 text-emerald-300',
+    pie:'bg-pink-500/20 text-pink-300', scatter:'bg-orange-500/20 text-orange-300',
+    radar:'bg-purple-500/20 text-purple-300', funnel:'bg-cyan-500/20 text-cyan-300',
+    heatmap:'bg-yellow-500/20 text-yellow-300',
+  };
+  const ctype = card.dataset.chartType || '';
+  document.getElementById('expandModalIcon').textContent  = typeIcons[ctype] || '📊';
+  document.getElementById('expandModalTitle').textContent = card.dataset.chartTitle || '';
+  const badge = document.getElementById('expandModalBadge');
+  badge.textContent = ctype;
+  badge.className = `tag text-xs capitalize flex-shrink-0 ${typeBadges[ctype] || 'bg-gray-500/20 text-gray-300'}`;
+
+  // SQL block
+  document.getElementById('expandSqlText').textContent = card.dataset.chartSql || '';
+  document.getElementById('expandSqlBlock').classList.add('hidden');
+  document.getElementById('expandSqlBtnLabel').textContent = 'View SQL';
+
+  // Show modal
+  const modal = document.getElementById('chartExpandModal');
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Init expand chart after the modal is visible and has real dimensions
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('expandChartEl');
+      if (!el) return;
+      if (_expandChart) { _expandChart.dispose(); _expandChart = null; }
+
+      const isDark = document.documentElement.classList.contains('dark');
+      _expandChart = echarts.init(el, isDark ? 'dark' : null, { renderer: 'canvas' });
+
+      // Clone option from the source chart so data/series are identical
+      const opt = JSON.parse(JSON.stringify(sourceChart.getOption()));
+
+      // Remove the inline title (already shown in the modal header)
+      if (opt.title && opt.title[0]) opt.title[0].text = '';
+
+      // Boost font sizes for the larger canvas
+      if (opt.legend && opt.legend[0]) {
+        opt.legend[0].textStyle = { ...opt.legend[0].textStyle, fontSize: 13 };
+      }
+      if (opt.xAxis && opt.xAxis[0] && opt.xAxis[0].axisLabel) {
+        opt.xAxis[0].axisLabel.fontSize = 12;
+        // Reset rotation since we have more space
+        opt.xAxis[0].axisLabel.rotate = 0;
+      }
+      if (opt.yAxis && opt.yAxis[0] && opt.yAxis[0].axisLabel) {
+        opt.yAxis[0].axisLabel.fontSize = 12;
+      }
+
+      _expandChart.setOption(opt);
+
+      // Handle resize
+      window._expandResizeHandler = () => _expandChart && _expandChart.resize();
+      window.addEventListener('resize', window._expandResizeHandler);
+    });
+  });
+}
+
+function closeExpandModal() {
+  document.getElementById('chartExpandModal').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (window._expandResizeHandler) {
+    window.removeEventListener('resize', window._expandResizeHandler);
+    window._expandResizeHandler = null;
+  }
+  if (_expandChart) { _expandChart.dispose(); _expandChart = null; }
+}
+
+function toggleExpandSql() {
+  const block = document.getElementById('expandSqlBlock');
+  const label = document.getElementById('expandSqlBtnLabel');
+  const hidden = block.classList.toggle('hidden');
+  label.textContent = hidden ? 'View SQL' : 'Hide SQL';
+  // Resize chart to account for the SQL block taking vertical space
+  setTimeout(() => _expandChart && _expandChart.resize(), 50);
+}
+
+// Close expand modal on Escape (separate from the add-db modal Escape handler)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('chartExpandModal').classList.contains('hidden')) {
+    closeExpandModal();
+  }
+});
 </script>
 {% endblock %}

@@ -23,7 +23,72 @@ from .models import DatabaseConnection, LLMModel
 from .aiTools import execute_query, fetch_schema
 from .providers.router import get_llm, get_summary_llm, LLM_PROVIDER, LLM_MODEL
 
-#logger = #logging.get#logger('app.ai')
+logger = logging.getLogger('app.ai')
+
+
+# ── LLM error classifier ───────────────────────────────────────────────────────
+
+def _classify_llm_error(exc: Exception) -> tuple[str, str]:
+    """
+    Inspect an LLM exception and return (short_code, user_message).
+
+    short_code is one of: 'rate_limit' | 'auth' | 'model_not_found' | 'unreachable' | 'unknown'
+    user_message is a clean, actionable string safe to show in the UI.
+    """
+    msg = str(exc).lower()
+    exc_type = type(exc).__name__
+
+    # ── Rate limit / quota exhausted ──────────────────────────────────────────
+    if any(k in msg for k in ('resource_exhausted', 'rate_limit', 'ratelimit',
+                               '429', 'quota', 'too many requests', 'retry')):
+        # Try to extract the retry-after hint from the message
+        import re
+        delay_match = re.search(r'retry.{0,20}?(\d+(?:\.\d+)?)\s*s', str(exc), re.I)
+        hint = f" Try again in ~{int(float(delay_match.group(1)))}s." if delay_match else ""
+        return ('rate_limit',
+                f"Rate limit reached for this model.{hint} "
+                "Consider switching to a different model or waiting before retrying.")
+
+    # ── Authentication / API key ───────────────────────────────────────────────
+    if any(k in msg for k in ('api_key', 'api key', 'authentication', 'unauthorized',
+                               'unauthenticated', '401', 'invalid key', 'permission denied',
+                               'api-key')):
+        return ('auth',
+                "Invalid or missing API key. Check your key in Settings.")
+
+    # ── Model not found ────────────────────────────────────────────────────────
+    if any(k in msg for k in ('model not found', 'no such model', '404', 'does not exist',
+                               'model_not_found', 'invalid model')):
+        return ('model_not_found',
+                "Model not found. The model ID may be incorrect — check it in Settings.")
+
+    # ── Network / connection ───────────────────────────────────────────────────
+    if any(k in msg for k in ('connection', 'timeout', 'unreachable', 'network',
+                               'econnrefused', 'name or service not known',
+                               'failed to connect', 'ssl', 'certificate')):
+        return ('unreachable',
+                "Could not reach the AI provider. Check your internet connection "
+                "or — for Ollama — make sure the local server is running.")
+
+    # ── Context / token length ─────────────────────────────────────────────────
+    if any(k in msg for k in ('context length', 'token', 'maximum context', 'too long',
+                               'context_length_exceeded', 'string too long')):
+        return ('context_length',
+                "The request was too long for this model. "
+                "Try a simpler question or a model with a larger context window.")
+
+    return ('unknown', f"The AI model returned an error: {type(exc).__name__}.")
+
+
+def _log_llm_error(code: str, exc: Exception, context: str = "") -> None:
+    """Log LLM errors — full traceback only for unexpected errors."""
+    prefix = f"[LLM ERROR:{code.upper()}]{' ' + context if context else ''}"
+    if code == 'unknown':
+        # Unexpected — log full traceback so developers can investigate
+        logger.error(f"{prefix} {exc}", exc_info=True)
+    else:
+        # Known operational error — one-liner is enough, no traceback spam
+        logger.warning(f"{prefix} {exc}")
 
 
 def _extract_text(content) -> str:
@@ -50,13 +115,6 @@ def _extract_text(content) -> str:
     if hasattr(content, 'text'):
         return content.text
     return str(content)
-from langchain_core.tools import tool
-
-from .models import DatabaseConnection
-from .aiTools import execute_query, fetch_schema
-
-#logger = #logging.get#logger('app.ai')
-
 
 
 # ── Tool definition ────────────────────────────────────────────────────────────
@@ -212,13 +270,12 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
     try:
         response: AIMessage = llm.invoke(messages)
     except Exception as e:
+        code, user_msg = _classify_llm_error(e)
+        _log_llm_error(code, e, context=f"db='{db.label}'")
         notify("done")
         return {
-            "sql": "", "columns": [], "rows": [], "error": str(e),
-            "nl_response": (
-                "The AI model could not be reached. "
-                "Check your RATE LIMIT, .env configuration and API keys."
-            ),
+            "sql": "", "columns": [], "rows": [], "error": user_msg,
+            "nl_response": user_msg,
         }
 
     messages.append(response)
@@ -281,7 +338,10 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
             final: AIMessage = summary_llm.invoke(messages)
             nl_response = _extract_text(final.content)
         except Exception as e:
-            nl_response = "Query ran successfully. See the data table below."
+            code, user_msg = _classify_llm_error(e)
+            _log_llm_error(code, e, context=f"db='{db.label}' [summary]")
+            # Data was retrieved successfully — show it even if summary failed
+            nl_response = "Query ran successfully — see the table below." if not query_error else user_msg
 
         if query_error:
             nl_response = "The query could not be completed. Please try rephrasing your question."
@@ -303,24 +363,24 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
 # ── Chart / Dashboard pipeline ─────────────────────────────────────────────────
 
 _CHART_SYSTEM = """You are a data visualisation expert. Given a database schema and a user's chart request, you must:
-1. Write a SQL SELECT query that retrieves the data needed for the chart.
-2. Decide the best chart type: bar, line, pie, doughnut, or scatter.
-3. Identify which column is the label (x-axis / category) and which column(s) are values (y-axis / series).
+1. Write a SQL SELECT query that retrieves the data needed.
+2. Choose the best ECharts chart type from: bar, line, pie, scatter, radar, funnel.
+3. Identify which column is the category/label (x-axis) and which are values (y-axis / series).
 
 Respond ONLY with a valid JSON object — no markdown, no explanation:
-{{
+{
   "title": "Short descriptive chart title",
-  "chart_type": "bar" | "line" | "pie" | "doughnut" | "scatter",
-  "sql": "SELECT ... FROM ...",
+  "chart_type": "bar" | "line" | "pie" | "scatter" | "radar" | "funnel",
+  "sql": "SELECT ...",
   "label_column": "column_name_for_labels",
   "value_columns": ["col1", "col2"]
-}}
+}
 
 Rules:
 - Only SELECT statements. Never INSERT, UPDATE, DELETE, DROP.
 - Use exact table/column names from the schema.
-- Keep result sets under 50 rows for readability.
-- For time-series, use line. For comparisons, use bar. For proportions, use pie/doughnut.
+- Keep result sets under 50 rows.
+- For trends over time use line. For comparisons use bar. For proportions use pie. For correlation use scatter. For multi-metric use radar.
 """
 
 _CHART_COLORS = [
@@ -337,18 +397,16 @@ _CHART_COLORS = [
 
 def run_chart_query(question: str, db, llm_model=None) -> dict:
     """
-    Generates a chart spec from a plain-English question.
-    Returns a dict ready to pass to Chart.js:
+    Generates an ECharts option object from a plain-English question.
+    Returns:
     {
         title, chart_type, sql,
-        labels: [...],
-        datasets: [{ label, data: [...], backgroundColor, borderColor }],
+        echarts_option: { ... },   # full ECharts option dict
         error: ""
     }
     """
     schema = db.fetched_schema or fetch_schema(db)
 
-    # Resolve provider
     if llm_model:
         provider_name = llm_model.provider.provider
         model_id      = llm_model.model_id
@@ -365,96 +423,189 @@ def run_chart_query(question: str, db, llm_model=None) -> dict:
     else:
         _llm = get_summary_llm
 
-    system = _CHART_SYSTEM
     schema_section = f"\nDATABASE SCHEMA:\n{schema}" if schema else ""
-    prompt = f"{system}{schema_section}\n\nUser request: {question}"
+    prompt = f"{_CHART_SYSTEM}{schema_section}\n\nUser request: {question}"
 
     try:
         from langchain_core.messages import HumanMessage
-        llm = _llm()
-        response = llm.invoke([HumanMessage(content=prompt)])
+        llm_instance = _llm()
+        response = llm_instance.invoke([HumanMessage(content=prompt)])
         raw = _extract_text(response.content).strip()
-        # Strip markdown fences if present
         for fence in ['```json', '```']:
             raw = raw.replace(fence, '')
         raw = raw.strip()
-        spec = json.loads(raw)
-    except Exception as e:
-        logger.error(f"[CHART LLM ERROR] {e}", exc_info=True)
-        return {'error': f'Could not generate chart spec: {e}', 'title': '', 'chart_type': 'bar',
-                'labels': [], 'datasets': [], 'sql': ''}
+        # find outermost JSON
+        s, e = raw.find('{'), raw.rfind('}')
+        spec = json.loads(raw[s:e+1])
+    except Exception as ex:
+        code, user_msg = _classify_llm_error(ex)
+        _log_llm_error(code, ex, context=f"chart db='{db.label}'")
+        return {'error': user_msg, 'title': '', 'chart_type': 'bar', 'sql': '', 'echarts_option': {}}
 
-    sql            = spec.get('sql', '').strip().rstrip(';')
-    chart_type     = spec.get('chart_type', 'bar')
-    title          = spec.get('title', question[:60])
-    label_col      = spec.get('label_column', '')
-    value_cols     = spec.get('value_columns', [])
+    sql        = spec.get('sql', '').strip().rstrip(';')
+    chart_type = spec.get('chart_type', 'bar')
+    title      = spec.get('title', question[:60])
+    label_col  = spec.get('label_column', '')
+    value_cols = spec.get('value_columns', [])
 
-    # Safety check
-    first_word = sql.split()[0].upper() if sql.strip() else ''
+    first_word = sql.strip().split()[0].upper() if sql.strip() else ''
     if first_word not in ('SELECT', 'WITH', 'EXPLAIN'):
         return {'error': 'Non-SELECT query blocked.', 'title': title, 'chart_type': chart_type,
-                'labels': [], 'datasets': [], 'sql': sql}
+                'sql': sql, 'echarts_option': {}}
 
     result = execute_query(db, sql)
     if result['error']:
         return {'error': result['error'], 'title': title, 'chart_type': chart_type,
-                'labels': [], 'datasets': [], 'sql': sql}
+                'sql': sql, 'echarts_option': {}}
 
-    columns = result['columns']
-    rows    = result['rows']
-
+    columns, rows = result['columns'], result['rows']
     if not rows:
         return {'error': 'Query returned no data.', 'title': title, 'chart_type': chart_type,
-                'labels': [], 'datasets': [], 'sql': sql}
+                'sql': sql, 'echarts_option': {}}
 
-    # If LLM didn't specify columns, infer: first col = labels, rest = values
+    # Infer columns if LLM didn't specify
     if not label_col and columns:
         label_col = columns[0]
-    if not value_cols and len(columns) > 1:
-        value_cols = [c for c in columns if c != label_col]
-    if not value_cols and columns:
+    if not value_cols:
         value_cols = [c for c in columns if c != label_col] or [columns[-1]]
 
-    col_idx  = {c: i for i, c in enumerate(columns)}
-    label_i  = col_idx.get(label_col, 0)
-    labels   = [r[label_i] for r in rows]
+    col_idx = {c: i for i, c in enumerate(columns)}
+    label_i = col_idx.get(label_col, 0)
+    labels  = [r[label_i] for r in rows]
 
-    datasets = []
-    for vi, vcol in enumerate(value_cols):
-        vi_idx = col_idx.get(vcol, -1)
-        if vi_idx == -1:
-            continue
-        raw_vals = [r[vi_idx] for r in rows]
-        # Convert to float where possible
-        data = []
-        for v in raw_vals:
-            try:
-                data.append(float(v))
-            except (TypeError, ValueError):
-                data.append(0)
+    def to_num(v):
+        try: return float(v)
+        except: return 0
 
-        color  = _CHART_COLORS[vi % len(_CHART_COLORS)]
-        border = color.replace('0.8', '1')
-        datasets.append({
-            'label':           vcol,
-            'data':            data,
-            'backgroundColor': [color] * len(data) if chart_type in ('pie', 'doughnut') else color,
-            'borderColor':     border,
-            'borderWidth':     2,
-            'fill':            chart_type == 'area',
-            'tension':         0.4,
-        })
+    # Rich ECharts color palette
+    colors = ['#6366f1','#34d399','#f472b6','#fb923c','#38bdf8',
+              '#facc15','#a78bfa','#4ade80','#f87171','#22d3ee']
 
-    # area is just line with fill=True in Chart.js
-    if chart_type == 'area':
-        chart_type = 'line'
+    option = {
+        'backgroundColor': 'transparent',
+        'color': colors,
+        'title': {
+            'text': title,
+            'textStyle': {'color': '#e5e7eb', 'fontSize': 13, 'fontWeight': '600', 'fontFamily': 'Inter'},
+            'left': 'left', 'top': 4,
+        },
+        'tooltip': {
+            'trigger': 'axis' if chart_type in ('bar','line','scatter') else 'item',
+            'backgroundColor': 'rgba(15,15,25,0.92)',
+            'borderColor': 'rgba(255,255,255,0.08)',
+            'textStyle': {'color': '#e5e7eb', 'fontSize': 12},
+        },
+        'grid': {'left': '3%', 'right': '4%', 'bottom': '12%', 'top': '14%', 'containLabel': True},
+        'animation': True,
+        'animationDuration': 800,
+        'animationEasing': 'cubicOut',
+    }
+
+    if chart_type == 'pie':
+        pie_data = []
+        vi = col_idx.get(value_cols[0], -1)
+        for i, row in enumerate(rows):
+            pie_data.append({'name': str(row[label_i]), 'value': to_num(row[vi]) if vi != -1 else 0})
+        option['series'] = [{
+            'type': 'pie', 'radius': ['35%', '65%'],
+            'center': ['50%', '55%'],
+            'data': pie_data,
+            'label': {'color': '#9ca3af', 'fontSize': 11},
+            'emphasis': {'itemStyle': {'shadowBlur': 20, 'shadowColor': 'rgba(0,0,0,0.5)'}},
+        }]
+        option.pop('grid', None)
+        option.pop('tooltip', None)
+        option['tooltip'] = {'trigger': 'item', 'backgroundColor': 'rgba(15,15,25,0.92)',
+                              'borderColor': 'rgba(255,255,255,0.08)', 'textStyle': {'color': '#e5e7eb'}}
+
+    elif chart_type == 'scatter':
+        series_data = []
+        xi = col_idx.get(value_cols[0], label_i)
+        yi = col_idx.get(value_cols[1] if len(value_cols) > 1 else value_cols[0], -1)
+        for row in rows:
+            series_data.append([to_num(row[xi]), to_num(row[yi]) if yi != -1 else 0])
+        option['xAxis'] = {'type': 'value', 'axisLabel': {'color': '#6b7280'}, 'splitLine': {'lineStyle': {'color': 'rgba(255,255,255,0.05)'}}}
+        option['yAxis'] = {'type': 'value', 'axisLabel': {'color': '#6b7280'}, 'splitLine': {'lineStyle': {'color': 'rgba(255,255,255,0.05)'}}}
+        option['series'] = [{'type': 'scatter', 'data': series_data, 'symbolSize': 8,
+                              'emphasis': {'itemStyle': {'shadowBlur': 10}}}]
+
+    elif chart_type == 'radar':
+        indicators = [{'name': vc, 'max': max((to_num(r[col_idx.get(vc, 0)]) for r in rows), default=100) * 1.2}
+                      for vc in value_cols]
+        radar_data = []
+        for row in rows:
+            radar_data.append({
+                'name': str(row[label_i]),
+                'value': [to_num(row[col_idx.get(vc, 0)]) for vc in value_cols],
+            })
+        option['radar'] = {'indicator': indicators, 'axisLine': {'lineStyle': {'color': 'rgba(255,255,255,0.1)'}},
+                           'splitLine': {'lineStyle': {'color': 'rgba(255,255,255,0.05)'}},
+                           'name': {'textStyle': {'color': '#9ca3af'}}}
+        option['series'] = [{'type': 'radar', 'data': radar_data,
+                              'areaStyle': {'opacity': 0.3},
+                              'lineStyle': {'width': 2}}]
+        option.pop('grid', None)
+
+    elif chart_type == 'funnel':
+        vi = col_idx.get(value_cols[0], -1)
+        funnel_data = sorted(
+            [{'name': str(r[label_i]), 'value': to_num(r[vi]) if vi != -1 else 0} for r in rows],
+            key=lambda x: x['value'], reverse=True
+        )
+        option['series'] = [{'type': 'funnel', 'left': '10%', 'width': '80%',
+                              'data': funnel_data,
+                              'label': {'position': 'inside', 'color': '#fff'},
+                              'emphasis': {'label': {'fontSize': 14}}}]
+        option.pop('grid', None)
+
+    else:  # bar or line
+        option['xAxis'] = {
+            'type': 'category', 'data': [str(l) for l in labels],
+            'axisLabel': {'color': '#6b7280', 'fontSize': 10, 'rotate': len(labels) > 8 and 30 or 0},
+            'axisLine': {'lineStyle': {'color': 'rgba(255,255,255,0.1)'}},
+        }
+        option['yAxis'] = {
+            'type': 'value',
+            'axisLabel': {'color': '#6b7280', 'fontSize': 10},
+            'splitLine': {'lineStyle': {'color': 'rgba(255,255,255,0.05)'}},
+        }
+        series_list = []
+        for vi_idx, vcol in enumerate(value_cols):
+            cidx = col_idx.get(vcol, -1)
+            if cidx == -1:
+                continue
+            vals = [to_num(r[cidx]) for r in rows]
+            color = colors[vi_idx % len(colors)]
+            s = {
+                'name': vcol, 'type': chart_type,
+                'data': vals,
+                'smooth': chart_type == 'line',
+                'emphasis': {'focus': 'series'},
+            }
+            if chart_type == 'line':
+                s['areaStyle'] = {'opacity': 0.15}
+                s['lineStyle'] = {'width': 2, 'color': color}
+                s['itemStyle'] = {'color': color}
+                s['symbol'] = 'circle'
+                s['symbolSize'] = 4
+            else:
+                s['itemStyle'] = {
+                    'color': {
+                        'type': 'linear', 'x': 0, 'y': 0, 'x2': 0, 'y2': 1,
+                        'colorStops': [
+                            {'offset': 0, 'color': color},
+                            {'offset': 1, 'color': color + '55'},
+                        ],
+                    },
+                    'borderRadius': [4, 4, 0, 0],
+                }
+            series_list.append(s)
+
+        option['series'] = series_list
+        if len(value_cols) > 1:
+            option['legend'] = {'textStyle': {'color': '#9ca3af', 'fontSize': 11}, 'top': 'bottom'}
 
     return {
-        'title':      title,
-        'chart_type': chart_type,
-        'sql':        sql,
-        'labels':     labels,
-        'datasets':   datasets,
-        'error':      '',
+        'title': title, 'chart_type': chart_type, 'sql': sql,
+        'echarts_option': option, 'error': '',
     }

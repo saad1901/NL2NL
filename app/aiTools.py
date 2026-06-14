@@ -140,9 +140,29 @@ def _get_connection(db: DatabaseConnection):
 
     elif db_type == 'sqlite':
         import sqlite3
+        import os
+        from django.conf import settings
+
         # File-based (uploaded CSV/Excel) uses sqlite_path; otherwise connection_string or db_name
-        path = getattr(db, 'sqlite_path', '') or db.connection_string or db.db_name
-        conn = sqlite3.connect(path)
+        raw_path = getattr(db, 'sqlite_path', '') or db.connection_string or db.db_name
+
+        # sqlite_path may be stored as absolute (old records) or relative to BASE_DIR.
+        # If the absolute path doesn't exist, try resolving it relative to BASE_DIR
+        # by extracting the portion starting at 'user_data/'.
+        if raw_path and not os.path.exists(raw_path):
+            # Attempt to remap: find 'user_data/' in the stored path and rebuild
+            marker = 'user_data' + os.sep
+            idx = raw_path.find(marker)
+            if idx == -1:
+                marker = 'user_data/'
+                idx = raw_path.find(marker)
+            if idx != -1:
+                relative = raw_path[idx:]  # e.g. "user_data/1/Cars_Dataset_1.db"
+                resolved = os.path.join(settings.BASE_DIR, relative)
+                if os.path.exists(resolved):
+                    raw_path = resolved
+
+        conn = sqlite3.connect(raw_path)
         return conn
 
     else:

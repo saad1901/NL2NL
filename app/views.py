@@ -360,7 +360,7 @@ def upload_file_db_view(request):
             db_type='sqlite',
             store_credentials=True,
             is_file_based=True,
-            sqlite_path=sqlite_file,
+            sqlite_path=os.path.relpath(sqlite_file, settings.BASE_DIR),  # store relative to BASE_DIR
             schema_description=f"Imported from {uploaded.name}",
         )
 
@@ -518,13 +518,12 @@ def dashboard_charts_list(request, db_id):
     db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
     charts = DashboardChart.objects.filter(database=db, user=request.user)
     data = [{
-        'id':         c.id,
-        'title':      c.title,
-        'question':   c.question,
-        'chart_type': c.chart_type,
-        'sql':        c.sql,
-        'labels':     c.chart_data.get('labels', []),
-        'datasets':   c.chart_data.get('datasets', []),
+        'id':             c.id,
+        'title':          c.title,
+        'question':       c.question,
+        'chart_type':     c.chart_type,
+        'sql':            c.sql,
+        'echarts_option': c.chart_data.get('echarts_option', {}),
     } for c in charts]
     return JsonResponse({'charts': data})
 
@@ -547,7 +546,7 @@ def dashboard_chart_save(request, db_id):
         question=data.get('question', ''),
         chart_type=data.get('chart_type', 'bar'),
         sql=data.get('sql', ''),
-        chart_data={'labels': data.get('labels', []), 'datasets': data.get('datasets', [])},
+        chart_data={'echarts_option': data.get('echarts_option', {})},
         position=DashboardChart.objects.filter(database=db, user=request.user).count(),
     )
     return JsonResponse({'ok': True, 'id': chart.id})
@@ -567,7 +566,26 @@ def docs_view(request):
     if not request.user.is_authenticated:
         return redirect('/login/')
     all_dbs = DatabaseConnection.objects.filter(user=request.user)
-    return render(request, 'docs.html', {'user': request.user, 'all_dbs': all_dbs})
+
+    openrouter_models = [
+        ('google/gemma-3-27b-it:free',            'Gemma 3 27B',        'Free · fast'),
+        ('google/gemma-4-31b-it:free',             'Gemma 4 31B',        'Free · capable'),
+        ('deepseek/deepseek-chat-v3-0324:free',    'DeepSeek Chat V3',   'Free · excellent for SQL'),
+        ('meta-llama/llama-3.3-70b-instruct:free', 'Llama 3.3 70B',      'Free · strong reasoning'),
+        ('mistralai/mistral-7b-instruct:free',     'Mistral 7B',         'Free · lightweight'),
+    ]
+    gemini_models = [
+        ('gemini-2.0-flash',      'Gemini 2.0 Flash',      'Free tier · fast'),
+        ('gemini-2.0-flash-lite', 'Gemini 2.0 Flash Lite', 'Free tier · lightest'),
+        ('gemini-1.5-flash',      'Gemini 1.5 Flash',      'Free tier · reliable'),
+        ('gemini-1.5-flash-8b',   'Gemini 1.5 Flash 8B',   'Free tier · smallest'),
+    ]
+    return render(request, 'docs.html', {
+        'user': request.user,
+        'all_dbs': all_dbs,
+        'openrouter_models': openrouter_models,
+        'gemini_models': gemini_models,
+    })
 
 
 def clear_history_view(request, db_id):    
