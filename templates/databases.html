@@ -549,7 +549,7 @@ function escHtml(s) {
 // Build SCHEMAS_BY_ID from the inline data
 const SCHEMAS_BY_ID = {};
 {% for db in databases %}{% if db.fetched_schema %}
-SCHEMAS_BY_ID[{{ db.id }}] = {{ db.fetched_schema|escapejs }};
+SCHEMAS_BY_ID[{{ db.id }}] = "{{ db.fetched_schema|escapejs }}";
 {% endif %}{% endfor %}
 </script>
 
