@@ -151,18 +151,28 @@ def _build_system_prompt(db: DatabaseConnection, schema: str) -> str:
 
 Your job:
 1. Understand the user's plain-English question.
-2. Write a correct SQL query that answers it.
-3. Call the run_sql tool with that query.
-4. When you receive the results, summarise the answer in plain English — clear, concise, no jargon.
-5. If the query returns no rows, say so clearly.
-6. If the question cannot be answered with SQL (e.g. it is conversational), answer directly without calling the tool.
+2. Write a correct SQL query that answers it and call run_sql.
+3. When you receive results, summarise the answer in plain English — clear, concise, no jargon.
+4. If the query returns no rows, say so clearly.
+5. If the question cannot be answered with SQL (e.g. it is conversational), answer directly without calling the tool.
+
+IMPORTANT — Schema accuracy:
+- You MUST use the EXACT table and column names shown in the schema above. Never guess or invent names.
+- If you are unsure whether a table or column exists with the exact name, run a small exploratory query first:
+  - SQLite:    SELECT name FROM sqlite_master WHERE type='table'
+  - PostgreSQL/MySQL: SELECT table_name FROM information_schema.tables WHERE table_schema='public'  (or DATABASE())
+  - Or peek at a table: SELECT * FROM <table> LIMIT 3
+- You MAY run up to 8 queries total to explore, verify, and answer the question. Use this ability when:
+  - You are unsure of exact table/column names
+  - The first query returned an error
+  - You need intermediate data to formulate the final query
+- Always finish with a plain-English summary once you have the answer.
 
 Rules:
-- Only write SELECT statements. Never INSERT, UPDATE, DELETE, DROP, or any DDL.
-- Use the exact table and column names from the schema above.
-- Always SELECT all columns that are relevant to the answer — including labels, names, numeric/value columns.
-- Limit results to 100 rows unless the user asks for more.
-- When summarising results, highlight key numbers and insights.
+- Only SELECT statements. Never INSERT, UPDATE, DELETE, DROP, or any DDL.
+- Always SELECT all columns relevant to the answer — labels, names, numeric/value columns.
+- Limit final results to 100 rows unless the user asks for more.
+- Highlight key numbers and insights in your summary.
 """
 
 
@@ -248,10 +258,6 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
         _get_summary_llm = get_summary_llm
 
     schema = db.fetched_schema or fetch_schema(db)
-    # if schema:
-    #     #logger.debug(f"[SCHEMA] {len(schema.splitlines())} tables for '{db.label}'")
-    # else:
-    #     #logger.warning(f"[SCHEMA] No schema for '{db.label}'")
 
     llm = _get_llm(tools=[run_sql])
 
@@ -260,78 +266,127 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
         HumanMessage(content=question),
     ]
 
-    executed_sql = ""
-    columns = []
-    rows = []
-    query_error = ""
+    executed_sql = ""   # last SQL that produced real data rows
+    columns      = []
+    rows         = []
+    query_error  = ""
+    all_sql      = []   # every SQL attempted this turn (for "View SQL")
 
-    # ── Step 1: first LLM call ────────────────────────────────────────────────
+    MAX_ITERATIONS = 8
+    iteration      = 0
+
     notify("thinking", "Understanding your question…")
-    try:
-        response: AIMessage = llm.invoke(messages)
-    except Exception as e:
-        code, user_msg = _classify_llm_error(e)
-        _log_llm_error(code, e, context=f"db='{db.label}'")
-        notify("done")
-        return {
-            "sql": "", "columns": [], "rows": [], "error": user_msg,
-            "nl_response": user_msg,
-        }
 
-    messages.append(response)
+    # ── Agentic loop ──────────────────────────────────────────────────────────
+    while iteration < MAX_ITERATIONS:
+        iteration += 1
 
-    # ── Step 2: resolve SQL ───────────────────────────────────────────────────
-    tool_call_args = None
-
-    if response.tool_calls:
-        tc = response.tool_calls[0]
-        tool_call_args = {"query": tc["args"].get("query", "").strip().rstrip(';'), "id": tc["id"]}
-    else:
-        tool_call_args = _extract_tool_call_from_text(_extract_text(response.content))
-        if tool_call_args:
-            pass
-
-    if tool_call_args:
-        executed_sql = tool_call_args["query"]
-        notify("generating", "Writing SQL query…")
-
-        first_word = executed_sql.strip().split()[0].upper() if executed_sql.strip() else ""
-        if first_word not in ("SELECT", "WITH", "EXPLAIN"):
+        # ── LLM call ─────────────────────────────────────────────────────────
+        try:
+            response: AIMessage = llm.invoke(messages)
+        except Exception as e:
+            code, user_msg = _classify_llm_error(e)
+            _log_llm_error(code, e, context=f"db='{db.label}' iter={iteration}")
             notify("done")
-            return {
-                "sql": executed_sql, "columns": [], "rows": [],
-                "error": "Non-SELECT query blocked.",
-                "nl_response": "I can only run read-only queries. The generated query was blocked for safety.",
-            }
+            return {"sql": executed_sql or "", "columns": [], "rows": [],
+                    "error": user_msg, "nl_response": user_msg}
 
-        # ── Step 3: execute SQL ───────────────────────────────────────────────
-        notify("querying", executed_sql)
-        result      = execute_query(db, executed_sql)
-        columns     = result["columns"]
-        rows        = result["rows"]
-        query_error = result["error"]
+        messages.append(response)
 
-        if query_error:
-            tool_result_text = f"Error executing query: {query_error}"
-        else:
-            notify("reading", f"{len(rows)} row{'s' if len(rows) != 1 else ''} returned")
-            if not rows:
-                tool_result_text = "Query executed successfully. No rows returned."
-            else:
-                header     = " | ".join(columns)
-                divider    = "-" * len(header)
-                data_lines = [" | ".join(r) for r in rows[:50]]
-                suffix     = f"\n... ({len(rows)} rows total)" if len(rows) > 50 else ""
-                tool_result_text = f"{header}\n{divider}\n" + "\n".join(data_lines) + suffix
-
+        # ── Extract tool call (structured or text fallback) ───────────────────
+        tool_call_args = None
         if response.tool_calls:
-            messages.append(ToolMessage(content=tool_result_text, tool_call_id=tool_call_args["id"]))
+            tc = response.tool_calls[0]
+            tool_call_args = {
+                "query": tc["args"].get("query", "").strip().rstrip(';'),
+                "id":    tc["id"],
+            }
+        else:
+            tool_call_args = _extract_tool_call_from_text(_extract_text(response.content))
+
+        # ── No tool call → LLM is done, extract final answer ─────────────────
+        if not tool_call_args:
+            nl_response = _extract_text(response.content)
+            break
+
+        sql = tool_call_args["query"]
+        tc_id = tool_call_args["id"]
+
+        # Safety: block non-SELECT
+        first_word = sql.strip().split()[0].upper() if sql.strip() else ""
+        if first_word not in ("SELECT", "WITH", "EXPLAIN"):
+            tool_result_text = "Error: only SELECT queries are allowed."
+            logger.warning(f"[QUERY BLOCKED] iter={iteration} sql='{sql[:80]}'")
+        else:
+            all_sql.append(sql)
+            is_exploratory = (
+                len(rows) == 0            # haven't got real data yet
+                or "sqlite_master" in sql.lower()
+                or "information_schema" in sql.lower()
+                or sql.strip().upper().startswith("EXPLAIN")
+            )
+
+            if is_exploratory and iteration > 1:
+                notify("querying", f"Exploring… ({sql[:60]}{'…' if len(sql)>60 else ''})")
+            elif iteration == 1:
+                notify("generating", "Writing SQL query…")
+                notify("querying", sql)
+            else:
+                notify("querying", f"Retrying… ({sql[:60]}{'…' if len(sql)>60 else ''})")
+
+            result      = execute_query(db, sql)
+            res_cols    = result["columns"]
+            res_rows    = result["rows"]
+            res_error   = result["error"]
+
+            if res_error:
+                tool_result_text = f"Error executing query: {res_error}"
+                query_error = res_error
+                logger.info(f"[QUERY ERROR] iter={iteration} err='{res_error[:120]}'")
+            else:
+                query_error = ""
+                notify("reading", f"{len(res_rows)} row{'s' if len(res_rows) != 1 else ''} returned")
+
+                # Only promote to "final result" if this looks like real answer data
+                # (not just a schema-exploration query)
+                if not is_exploratory or (res_rows and iteration >= MAX_ITERATIONS - 1):
+                    executed_sql = sql
+                    columns      = res_cols
+                    rows         = res_rows
+
+                if not res_rows:
+                    tool_result_text = "Query executed successfully. No rows returned."
+                else:
+                    header     = " | ".join(res_cols)
+                    divider    = "-" * len(header)
+                    data_lines = [" | ".join(r) for r in res_rows[:50]]
+                    suffix     = f"\n... ({len(res_rows)} rows total)" if len(res_rows) > 50 else ""
+                    tool_result_text = f"{header}\n{divider}\n" + "\n".join(data_lines) + suffix
+
+        # Feed result back into conversation
+        if response.tool_calls:
+            messages.append(ToolMessage(content=tool_result_text, tool_call_id=tc_id))
         else:
             messages.append(HumanMessage(
-                content=f"Query result:\n{tool_result_text}\n\nNow summarise this in plain English."
+                content=f"Query result:\n{tool_result_text}\n\nContinue."
             ))
 
-        # ── Step 4: summary LLM call ──────────────────────────────────────────
+    else:
+        # Hit iteration limit — ask for a summary of what we have
+        nl_response = "Reached the maximum number of query attempts."
+
+    # ── Final summary call ─────────────────────────────────────────────────────
+    # Needed when the loop ran out of iterations, OR when it broke out but the
+    # last message in the conversation is still a ToolMessage (not a text reply).
+    last_msg = messages[-1] if messages else None
+    needs_summary = (
+        last_msg is not None
+        and not isinstance(last_msg, AIMessage)  # last msg is a ToolMessage or HumanMessage
+    ) or (
+        isinstance(last_msg, AIMessage) and bool(getattr(last_msg, 'tool_calls', None))
+    )
+
+    if needs_summary:
         notify("summarising", "Preparing your answer…")
         try:
             summary_llm = _get_summary_llm()
@@ -340,19 +395,18 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
         except Exception as e:
             code, user_msg = _classify_llm_error(e)
             _log_llm_error(code, e, context=f"db='{db.label}' [summary]")
-            # Data was retrieved successfully — show it even if summary failed
-            nl_response = "Query ran successfully — see the table below." if not query_error else user_msg
+            nl_response = "Query ran successfully — see the table below." if rows else user_msg
 
-        if query_error:
-            nl_response = "The query could not be completed. Please try rephrasing your question."
-
-    else:
-        nl_response = _extract_text(response.content)
+    if query_error and not rows:
+        nl_response = "The query could not be completed. Please try rephrasing your question."
 
     notify("done")
 
+    # Use the last SQL that produced data; fall back to last attempted SQL
+    display_sql = executed_sql or (all_sql[-1] if all_sql else "")
+
     return {
-        "sql":         executed_sql,
+        "sql":         display_sql,
         "nl_response": nl_response,
         "columns":     columns,
         "rows":        rows,

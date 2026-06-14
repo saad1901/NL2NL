@@ -216,8 +216,16 @@ def ask_view(request, db_id):
 def databases_view(request):
     if not request.user.is_authenticated:
         return redirect('/login/')
-    dbs = DatabaseConnection.objects.filter(user=request.user)
-    return render(request, 'databases.html', {'user': request.user, 'databases': dbs})
+    dbs = list(DatabaseConnection.objects.filter(user=request.user))
+    # Annotate each db with the table count from fetched_schema
+    for db in dbs:
+        db.table_count = len([l for l in db.fetched_schema.strip().splitlines() if l.strip()]) if db.fetched_schema else 0
+    return render(request, 'databases.html', {
+        'user': request.user,
+        'databases': dbs,
+        'databases_with_schema': sum(1 for db in dbs if db.fetched_schema),
+        'databases_file_based': sum(1 for db in dbs if db.is_file_based),
+    })
 
 
 def add_database_view(request):
@@ -604,3 +612,54 @@ def delete_database_view(request, db_id):
     db.delete()
     messages.success(request, 'Database removed.')
     return redirect('/databases/')
+
+
+@require_POST
+def update_database_view(request, db_id):
+    """AJAX: update label and/or schema_description for a database."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid request.'}, status=400)
+
+    label = data.get('label', '').strip()
+    description = data.get('schema_description', '').strip()
+
+    if not label:
+        return JsonResponse({'error': 'Label cannot be empty.'}, status=400)
+
+    # Check uniqueness — allow keeping the same label
+    if label != db.label and DatabaseConnection.objects.filter(user=request.user, label=label).exists():
+        return JsonResponse({'error': f'You already have a database labelled "{label}".'}, status=400)
+
+    db.label = label
+    db.schema_description = description
+    db.save(update_fields=['label', 'schema_description'])
+    logger.info(f"[DB UPDATE] id={db.id} label='{label}' user='{request.user.email}'")
+    return JsonResponse({'ok': True, 'label': db.label})
+
+
+@require_POST
+def refresh_schema_view(request, db_id):
+    """AJAX: re-fetch and store the schema for a database."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthenticated'}, status=401)
+    db = get_object_or_404(DatabaseConnection, id=db_id, user=request.user)
+
+    if not db.store_credentials:
+        return JsonResponse({'error': 'Schema cannot be refreshed for label-only databases.'}, status=400)
+
+    schema = fetch_schema(db)
+    if schema:
+        db.fetched_schema = schema
+        db.schema_fetched_at = timezone.now()
+        db.save(update_fields=['fetched_schema', 'schema_fetched_at'])
+        table_count = len(schema.strip().splitlines())
+        logger.info(f"[SCHEMA REFRESH] id={db.id} tables={table_count} user='{request.user.email}'")
+        return JsonResponse({'ok': True, 'schema': schema, 'table_count': table_count,
+                             'refreshed_at': db.schema_fetched_at.strftime('%b %d, %Y %H:%M')})
+    else:
+        return JsonResponse({'error': 'Could not fetch schema. Check connection details.'}, status=400)

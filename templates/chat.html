@@ -1115,7 +1115,6 @@ function appendAI(data) {
   const d = document.createElement('div');
   d.className = 'flex items-start gap-3 fade-in';
 
-  const tableHtml = buildTable(data);
   const sqlClass  = devMode ? '' : 'hidden';
   const hasError  = data.error && data.error !== '';
 
@@ -1135,6 +1134,11 @@ function appendAI(data) {
   const responseColor = hasError ? 'text-red-300' : '';
   const responseContent = hasError ? `<span class="${responseColor}">${esc(data.nl_response)}</span>` : renderMd(data.nl_response);
 
+  // If the LLM included a Markdown table in its response, don't also render
+  // the separate data table — it would show the same data twice.
+  const mdHasTable = /^\s*\|.+\|/m.test(data.nl_response || '');
+  const showDataTable = !hasError && !mdHasTable;
+
   d.innerHTML = `
     <div class="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center flex-shrink-0 mt-0.5">
       <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1146,7 +1150,7 @@ function appendAI(data) {
         ${errorBadge}
         ${responseContent}
       </div>
-      ${tableHtml}
+      ${showDataTable ? buildTable(data) : ''}
       ${data.generated_sql ? `<div class="sql-section ${sqlClass}"><div class="sql-block text-gray-300">${esc(data.generated_sql)}</div></div>` : ''}
       ${data.generated_sql ? `
       <div class="flex items-center gap-2">
