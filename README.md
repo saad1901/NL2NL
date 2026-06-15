@@ -1,174 +1,316 @@
-# AskYourData (NL2NL AI System)
+<div align="center">
 
-AskYourData is a full-stack Django application that lets users query relational databases in plain English, automatically converts those questions into SQL, runs the SQL on the selected database, and returns both human-readable insights and interactive charts.[1]
+<img src="https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+<img src="https://img.shields.io/badge/Django-6.0-092E20?style=for-the-badge&logo=django&logoColor=white"/>
+<img src="https://img.shields.io/badge/LangChain-1.3+-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white"/>
+<img src="https://img.shields.io/badge/Apache_ECharts-5.4-AA344D?style=for-the-badge&logo=apache&logoColor=white"/>
 
-**Live Demo:** [https://nl2nlbysaad.pythonanywhere.com/](https://nl2nlbysaad.pythonanywhere.com/)
+<br/><br/>
 
-## Overview
-
-The project is designed for non-technical users such as managers and analysts who need answers from business data without writing SQL.[1] It also keeps the workflow transparent for technical users by supporting generated SQL visibility and preserving a full query history for audit and debugging use cases.[1]
-
-The application uses Django as the web framework, Tailwind CSS with vanilla JavaScript for the frontend, LangChain-based AI orchestration, and `sqlglot` for SQL parsing and validation.[1] It supports PostgreSQL, MySQL, and SQLite-style workflows through configurable database connections and schema-aware prompting.[1]
-
-## Key Features
-
-- Ask questions in natural language and receive SQL-backed answers.[1]
-- Execute generated SQL against connected databases and return formatted results.[1]
-- Display structured output as tables together with plain-English summaries.[1]
-- Generate interactive line, bar, and pie charts for query results.[1]
-- Manage multiple database connections per user with session-based isolation.[1]
-- Keep a per-database query history for traceability and debugging.[1]
-- Support optional schema descriptions to improve prompt quality and accuracy.[1]
-
-## How It Works
-
-The application follows a schema-aware natural language to analytics pipeline.[1]
-
-```text
-User Question
-   ↓
-Schema Context + Connection Metadata
-   ↓
-LangChain / LLM Pipeline
-   ↓
-Generated SQL
-   ↓
-SQL Validation
-   ↓
-Database Execution
-   ↓
-Rows + Columns
-   ↓
-Natural-Language Summary + Chart Configuration
+```
+  _   _ _     ____  ____   ___  _
+ | \ | | |   |___ \/ ___| / _ \| |
+ |  \| | |     __) \___ \| | | | |
+ | |\  | |___ / __/ ___) | |_| | |___
+ |_| \_|_____|_____|____/ \__\_\_____|
 ```
 
-In practice, the system reads the target database structure, combines that schema context with the user question, generates SQL, executes it on the selected database, and formats the returned data for both tabular and visual presentation.[1] This makes the interface useful for both quick KPI checks and exploratory analytics.[1]
+### **Talk to your databases in plain English**
+*Query any SQL database without writing a single line of SQL*
 
-## Tech Stack
+<br/>
 
-| Layer | Technology |
-|---|---|
-| Backend | Django 6, Python 3.12+ |
-| AI / LLM | LangChain, langchain-openai, langchain-community |
-| SQL Safety | `sqlglot` |
-| Databases | PostgreSQL, MySQL, SQLite |
-| Frontend | Tailwind CSS (CDN), Vanilla JavaScript |
-| Charts | Apache ECharts |
-| Package Management | `uv` |
-| App Storage | SQLite (`db.sqlite3`) |
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-nl2nlbysaad.pythonanywhere.com-5c7cfa?style=for-the-badge)](https://nl2nlbysaad.pythonanywhere.com/)
 
-All of these technologies are described in the current project context, including the use of `uv` for dependency management and the Django app database stored in SQLite for local app state.[1]
+</div>
 
-## Core Modules
+---
 
-### 1. Authentication and Session Handling
+## What is NL2SQL?
 
-The platform uses Django's built-in user model and session-based authentication to protect routes and isolate each user's connected databases.[1] This enables a simple multi-database workflow without requiring JWT or separate token infrastructure.[1]
+NL2SQL is a full-stack Django application that bridges the gap between business users and their data. Type a question in plain English — the system writes the SQL, runs it, and hands back a clean answer with tables, charts, and a natural-language summary.
 
-### 2. Database Connection Management
+No SQL knowledge required. No waiting for an analyst.
 
-Each user can create and manage labeled database connections with metadata such as host, port, database name, SSL usage, and optional schema descriptions.[1] The `DatabaseConnection` model is responsible for storing this configuration and supports multiple connection types.[1]
-
-### 3. Query Processing
-
-Every natural-language question is tracked through the `QueryHistory` model, which stores the user prompt, generated SQL, natural-language response, error state, and timestamp.[1] This provides useful observability for debugging, user support, and future model improvement.[1]
-
-### 4. Visualization Layer
-
-The chat interface can render returned rows and columns as charts in addition to tables, using Apache ECharts integrated directly in the Django template flow.[1] The system supports line charts for temporal data, bar charts for categorical comparisons, and pie charts for composition-style summaries.[1]
-
-## Project Structure
-
-```text
-NL2SQL2/
-├── app/
-│   ├── models.py
-│   ├── views.py
-│   ├── aiView.py
-│   ├── aiTools.py
-│   └── migrations/
-├── templates/
-│   ├── base.html
-│   ├── chat.html
-│   ├── login.html
-│   ├── register.html
-│   ├── dashboard_empty.html
-│   ├── add_database.html
-│   └── databases.html
-├── db.sqlite3
-├── pyproject.toml
-└── uv.lock
+```
+"Show me the top 10 customers by revenue this quarter"
+        ↓  LangChain + LLM  ↓
+SELECT customer_name, SUM(revenue) AS total
+FROM orders
+WHERE created_at >= DATE_TRUNC('quarter', NOW())
+GROUP BY customer_name
+ORDER BY total DESC LIMIT 10;
+        ↓  Execute + Summarise  ↓
+"Acme Corp leads with $142k, followed by ..."  📊
 ```
 
-The current structure separates app logic, AI orchestration, and presentation templates clearly, which makes the project easier to extend and debug.[1]
+---
 
-## Main Workflows
+## ✨ Features
 
-### Natural Language to SQL
+<table>
+<tr>
+<td width="50%">
 
-1. The user selects a database and enters a plain-English question.[1]
-2. The system gathers schema context from the destination database.[1]
-3. An LLM generates SQL tailored to the schema and database engine.[1]
-4. The query is validated and executed on the selected database.[1]
-5. The results are returned as rows, columns, and a natural-language explanation.[1]
+**🧠 Agentic Query Pipeline**
+- Up to 8 LLM iterations per question
+- Self-corrects on SQL errors automatically
+- Exploratory queries to verify schema names
+- Multi-step reasoning for complex questions
 
-### Result Presentation
+**📊 Interactive Dashboard**
+- AI-generated ECharts visualisations
+- Bar, line, pie, scatter, radar, funnel charts
+- Persistent charts saved per database
+- Expand to fullscreen, refresh, export PNG
 
-1. The backend returns a structured JSON response from the `/chat/<db_id>/ask/` endpoint.[1]
-2. The frontend renders the answer in the chat UI, optionally exposes the SQL, and shows result tables when row data is available.[1]
-3. The same result shape can drive Apache ECharts visualizations for fast dashboard-style interpretation.[1]
+</td>
+<td width="50%">
 
-## Why This Project Matters
+**🔌 Multi-Provider LLM Support**
+- Google Gemini (free tier)
+- OpenAI GPT models
+- Anthropic Claude
+- OpenRouter (50+ free models)
+- Ollama (fully local / offline)
 
-AskYourData reduces dependency on analysts or engineers for routine business reporting by making databases accessible through plain English.[1] It is especially useful in environments where decision-makers need fast answers but do not know SQL.[1]
+**🗄️ Flexible Database Connections**
+- PostgreSQL, MySQL, SQL Server, SQLite
+- CSV / Excel → auto-converted to SQLite
+- Schema auto-fetch and caching
+- Label-only mode (credentials per session)
 
-At the same time, the project remains developer-friendly because it preserves the generated SQL, keeps historical records, and can be extended into a stronger audited analytics workflow.[1]
+</td>
+</tr>
+<tr>
+<td>
 
-## Current Status
+**💬 Rich Chat Interface**
+- Streaming SSE responses with live status
+- Markdown rendering (tables, bold, code)
+- Toggle SQL visibility per message
+- Full query history with export
 
-The project context notes that the architecture and UI are in place, while some AI execution components and hardening steps are still being completed.[1] Known areas include finalizing the LLM pipeline in `aiView.py`, implementing schema utilities in `aiTools.py`, encrypting stored passwords, and wiring the database listing template to real data.[1]
+</td>
+<td>
 
-This makes the repository a strong applied AI + backend systems project that already demonstrates product design, database integration, and LLM-driven analytics workflows.[1]
+**⚙️ Admin & Management**
+- Full Django admin with query viewer
+- Per-user database management
+- Schema browser with column types
+- Dark/light theme toggle
 
-## Local Setup
+</td>
+</tr>
+</table>
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Browser (Tailwind + Vanilla JS)      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  Chat UI     │  │  Dashboard   │  │  DB Manager  │  │
+│  │  (SSE stream)│  │  (ECharts)   │  │  (CRUD)      │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
+└─────────┼─────────────────┼─────────────────┼───────────┘
+          │                 │                 │
+┌─────────▼─────────────────▼─────────────────▼───────────┐
+│                    Django 6  (views.py)                   │
+│         ask_view │ dashboard_chart_view │ databases_view  │
+└─────────────────────┬───────────────────────────────────-┘
+                      │
+┌─────────────────────▼────────────────────────────────────┐
+│               aiView.py  —  Agentic Loop                  │
+│                                                           │
+│   ┌──────────┐    ┌───────────┐    ┌───────────────┐    │
+│   │ System   │    │  LLM call │    │  run_sql tool │    │
+│   │ Prompt + │───▶│ (iter 1-8)│───▶│  execute_query│    │
+│   │ Schema   │    │           │◀───│  → feed back  │    │
+│   └──────────┘    └───────────┘    └───────────────┘    │
+│                     ↓ text reply                          │
+│                   Summary LLM → nl_response               │
+└──────────────────────────────────────────────────────────┘
+                      │
+┌─────────────────────▼────────────────────────────────────┐
+│               Provider Layer  (app/providers/)            │
+│   gemini │ openai │ anthropic │ openrouter │ ollama       │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Python 3.12+
-- `uv`
-- A supported SQL database to connect to
+- [`uv`](https://docs.astral.sh/uv/getting-started/installation/) package manager
 
 ### Installation
 
 ```bash
+# Clone
 git clone https://github.com/saad1901/NL2NL.git
 cd NL2NL
+
+# Install dependencies & run migrations
 uv run python manage.py migrate
+
+# Create an admin account
+uv run python manage.py createsuperuser
+
+# Start the dev server
 uv run python manage.py runserver
 ```
 
-The project context specifies `uv run python manage.py migrate` for migrations and `uv run python manage.py runserver` for local development.[1]
+Open **http://127.0.0.1:8000** — register an account and add your first database.
 
-## Demo Link
+### Environment Variables (optional)
 
-The application is available here: [https://nl2nlbysaad.pythonanywhere.com/](https://nl2nlbysaad.pythonanywhere.com/)
+Copy `.Example_env` to `.env` and fill in defaults:
 
-## Resume-Style Highlights
+```env
+# Fallback LLM if no model configured in UI
+LLM_PROVIDER=gemini          # gemini | openai | anthropic | openrouter | ollama
+LLM_MODEL=gemini-2.0-flash
+GEMINI_API_KEY=your_key_here
 
-- Built a LangChain-powered system that translates natural language into SQL, executes the query, and returns formatted results.[1]
-- Enabled secure multi-database workflows with Django sessions and user-scoped connection management.[1]
-- Added schema lookup from `INFORMATION_SCHEMA`-style metadata to improve SQL quality and reduce hallucinations.[1]
-- Integrated Apache ECharts for dynamic analytics dashboards inside a Django application.[1]
+# Ollama (local)
+OLLAMA_BASE_URL=http://localhost:11434
+```
 
-## Future Improvements
+> LLM credentials can also be configured per-user directly in the **Settings** page — no `.env` needed.
 
-- Add encrypted storage for database passwords.[1]
-- Complete and harden the AI execution pipeline in `aiView.py` and `aiTools.py`.[1]
-- Replace placeholder UI elements in the databases page with fully dynamic rendering.[1]
-- Add production-ready configuration for secrets, allowed hosts, and debug settings.[1]
+---
 
-## Author
+## 🔑 Getting a Free API Key
 
-**Shaikh Saad**  
-GitHub: [saad1901](https://github.com/saad1901)  
-LinkedIn: [saad99](https://linkedin.com/in/saad99)
+| Provider | Free Tier | Best For |
+|---|---|---|
+| [Google Gemini](https://aistudio.google.com/apikey) | 1500 req/day | Fast, reliable SQL |
+| [OpenRouter](https://openrouter.ai/keys) | Multiple free models | Variety, no billing |
+| [Ollama](https://ollama.com) | Unlimited (local) | Privacy, offline use |
+
+**Recommended free models on OpenRouter:**
+```
+google/gemma-3-27b-it:free
+deepseek/deepseek-chat-v3-0324:free
+meta-llama/llama-3.3-70b-instruct:free
+```
+
+---
+
+## 📁 Project Structure
+
+```
+NL2SQL/
+├── app/
+│   ├── models.py          # DatabaseConnection, QueryHistory, LLMProvider, DashboardChart
+│   ├── views.py           # All HTTP views + SSE streaming endpoint
+│   ├── aiView.py          # Agentic LLM pipeline (run_nl_query, run_chart_query)
+│   ├── aiTools.py         # Schema fetch, query execution, DB drivers
+│   ├── admin.py           # Full Django admin with query viewer
+│   └── providers/
+│       ├── gemini.py      # Google Gemini
+│       ├── openai.py      # OpenAI
+│       ├── anthropic.py   # Anthropic Claude
+│       ├── openrouter.py  # OpenRouter
+│       ├── ollama.py      # Ollama (local)
+│       └── router.py      # .env-based provider selector
+├── templates/
+│   ├── base.html          # Tailwind config, theme toggle, Add DB modal
+│   ├── chat.html          # Main chat + dashboard panel (1400+ lines)
+│   ├── databases.html     # DB management with schema viewer
+│   └── settings.html      # LLM provider & model configuration
+├── NL2SQL2/
+│   ├── settings.py
+│   └── urls.py
+├── user_data/             # Per-user SQLite files (CSV/Excel uploads)
+├── pyproject.toml
+└── .Example_env
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Backend** | Django 6.0, Python 3.12 | Web framework, ORM, auth |
+| **AI Orchestration** | LangChain 1.3+ | Tool-calling, multi-step agents |
+| **LLM Providers** | Gemini, OpenAI, Anthropic, OpenRouter, Ollama | SQL generation & summarisation |
+| **SQL Parsing** | `sqlglot` | Validation, dialect normalisation |
+| **Frontend** | Tailwind CSS (CDN), Vanilla JS | UI, no build step |
+| **Charts** | Apache ECharts 5.4 | Interactive visualisations |
+| **Markdown** | marked.js 12 | Rendering LLM responses |
+| **DB Drivers** | psycopg2, pymysql, sqlite3 | PostgreSQL, MySQL, SQLite |
+| **Package Manager** | `uv` | Fast Python dependency management |
+
+---
+
+## 📸 Screenshots
+
+> Chat interface with streaming responses and result table
+
+```
+┌─────────────────────────────────────────────────────┐
+│  NL2SQL  │  Cars Dataset 1  [Dashboard]             │
+├──────────┼──────────────────────────────────────────┤
+│          │                                          │
+│  Databases│  You: Show top 5 cars by price          │
+│           │                                         │
+│  Settings │  🤖 Here are the 5 most expensive...   │
+│           │  ┌─────────────────────────────────┐    │
+│  Docs     │  │ Brand  │ Model    │ Price       │    │
+│           │  │ Audi   │ RS7      │ 8,900,000   │    │
+│           │  │ BMW    │ X5       │ 4,950,000   │    │
+│           │  └─────────────────────────────────┘    │
+│           │  [View SQL] [CSV] [Copy MD]              │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔒 Security Notes
+
+- Database passwords are stored plain-text in development — encrypt with Fernet before any production deployment
+- `DEBUG = True` and `SECRET_KEY` is the Django default — change both for production
+- All generated SQL is validated as `SELECT`-only before execution — no write operations possible
+- API keys are masked in the admin panel and never exposed in responses
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Fernet encryption for stored database credentials
+- [ ] Production deployment guide (Docker + Nginx)
+- [ ] CSV/Excel export from chat results
+- [ ] Chart PNG export from dashboard
+- [ ] Query sharing / public links
+- [ ] Scheduled queries & email reports
+- [ ] Multi-tenant SaaS mode
+
+---
+
+## 👤 Author
+
+<div align="center">
+
+**Shaikh Saad**
+
+[![GitHub](https://img.shields.io/badge/GitHub-saad1901-181717?style=for-the-badge&logo=github)](https://github.com/saad1901)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-saad99-0A66C2?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/saad99)
+[![Demo](https://img.shields.io/badge/Live_Demo-pythonanywhere-1f8ef1?style=for-the-badge&logo=python)](https://nl2nlbysaad.pythonanywhere.com/)
+
+</div>
+
+---
+
+<div align="center">
+
+*Built with ☕ and too many LLM API calls*
+
+</div>
