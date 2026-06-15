@@ -55,7 +55,7 @@
     <header class="flex items-center justify-between px-6 py-4 border-b border-subtle header-bg sticky top-0 z-10">
       <div>
         <h1 class="text-base font-semibold text-main">AI Model Settings</h1>
-        <p class="text-xs text-muted">Manage providers, API keys and models</p>
+        <p class="text-xs text-muted">Add your own API key for higher limits — community models work out of the box</p>
       </div>
       <button onclick="toggleTheme()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 text-muted hover:text-main transition">
         <svg class="theme-icon-dark w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,50 +71,35 @@
 
       <!-- Community Keys Banner -->
       {% if community_keys %}
-      <div class="glass rounded-2xl border border-green-500/20 overflow-hidden">
-        <div class="flex items-center gap-2.5 px-5 py-3 border-b border-white/5 bg-green-500/5">
-          <svg class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-          </svg>
-          <p class="text-sm font-semibold text-white">Community API Keys</p>
-          <span class="tag bg-green-500/10 text-green-400 text-xs ml-auto">Free to use</span>
+      <div class="glass rounded-2xl border overflow-hidden" style="border-color:rgba(52,211,153,0.25)">
+        <div class="flex items-center gap-2.5 px-5 py-3 border-b border-white/5" style="background:rgba(52,211,153,0.05)">
+          <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0"></div>
+          <p class="text-sm font-semibold text-white">Community Models — already available</p>
+          <span class="ml-auto tag bg-green-500/10 text-green-400 text-xs">No setup needed</span>
         </div>
-        <div class="px-5 py-4 space-y-3">
-          <p class="text-xs text-gray-400">Shared keys from the community — copy one and add it below to get started instantly.</p>
+        <div class="px-5 py-4 space-y-2.5">
+          <p class="text-xs text-gray-400 leading-relaxed">
+            The models below are shared by the community and appear directly in the
+            <strong class="text-gray-200">model selector</strong> on the chat page.
+            You don't need to do anything — they just work.
+          </p>
           {% for key in community_keys %}
-          <div class="flex items-start justify-between gap-3 p-3 rounded-xl bg-white/3 border border-white/5">
-            <div class="min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <p class="text-xs font-semibold text-white">{{ key.display_name }}</p>
-                <span class="tag bg-white/5 text-gray-400 text-xs">{{ key.get_provider_display }}</span>
-              </div>
-              {% if key.note %}<p class="text-xs text-gray-500">{{ key.note }}</p>{% endif %}
-              {% with models=key.models_list %}{% if models %}
-              <div class="flex flex-wrap gap-1.5 mt-2">
-                {% for model_id, model_name in models %}
-                <div class="flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-white/5">
-                  <span class="text-xs text-gray-300">{{ model_name }}</span>
-                  <button onclick="copyField('{{ model_id|escapejs }}', this)" title="Copy model ID"
-                    class="text-gray-600 hover:text-brand-400 transition">
-                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3"/>
-                    </svg>
-                  </button>
-                </div>
-                {% endfor %}
-              </div>
-              {% endif %}{% endwith %}
+          {% with models=key.models_list %}
+          {% for model_id, model_name in models %}
+          <div class="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-white/3 border border-white/5">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="tag bg-green-500/10 text-green-400 text-xs flex-shrink-0">Community</span>
+              <p class="text-sm font-medium text-white truncate">{{ model_name }}</p>
+              <code class="text-xs text-gray-600 font-mono hidden sm:block">{{ model_id }}</code>
             </div>
-            <button onclick="copyField('{{ key.api_key|escapejs }}', this)"
-              class="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                     bg-brand-500/15 text-brand-300 hover:bg-brand-500/25 transition">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3"/>
-              </svg>
-              <span>Copy Key</span>
-            </button>
+            <span class="text-xs text-gray-600 flex-shrink-0">{{ key.get_provider_display }}</span>
           </div>
           {% endfor %}
+          {% endwith %}
+          {% endfor %}
+          {% if community_keys.0.note %}
+          <p class="text-xs text-gray-600 pt-1">{{ community_keys.0.note }}</p>
+          {% endif %}
         </div>
       </div>
       {% endif %}
@@ -231,8 +216,12 @@
           </div>
         </div>
         {% empty %}
-        <div id="emptyProviders" class="glass rounded-2xl p-8 text-center">
-          <p class="text-muted text-sm">No providers configured yet. Add one above.</p>
+        <div id="emptyProviders" class="glass rounded-2xl p-6 text-center border border-white/5">
+          <p class="text-sm text-gray-300 font-medium mb-1">No personal API keys configured</p>
+          <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+            Community models are already available in the chat — you don't need your own key to get started.<br/>
+            Add a key here if you want higher rate limits, a specific model, or fully private/local inference with Ollama.
+          </p>
         </div>
         {% endfor %}
       </div>

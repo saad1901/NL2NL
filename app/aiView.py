@@ -228,13 +228,21 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
             try: status_cb(step, detail)
             except Exception: pass
 
-    # Resolve provider/model
+    # Resolve provider/model — llm_model can be:
+    #   - an LLMModel instance (user's own model)
+    #   - a dict {'provider', 'model_id', 'api_key', 'base_url'} (community model)
+    #   - None (falls back to .env)
     if llm_model:
-        provider_name = llm_model.provider.provider
-        model_id      = llm_model.model_id
-        api_key       = llm_model.provider.api_key
-        base_url      = llm_model.provider.base_url
-        # #logger.info(f"[QUERY START] db='{db.label}' provider={provider_name} model={model_id} question='{question}'")
+        if isinstance(llm_model, dict):
+            provider_name = llm_model['provider']
+            model_id      = llm_model['model_id']
+            api_key       = llm_model['api_key']
+            base_url      = llm_model.get('base_url', '')
+        else:
+            provider_name = llm_model.provider.provider
+            model_id      = llm_model.model_id
+            api_key       = llm_model.provider.api_key
+            base_url      = llm_model.provider.base_url
 
         def _get_llm(tools):
             import importlib
@@ -462,10 +470,16 @@ def run_chart_query(question: str, db, llm_model=None) -> dict:
     schema = db.fetched_schema or fetch_schema(db)
 
     if llm_model:
-        provider_name = llm_model.provider.provider
-        model_id      = llm_model.model_id
-        api_key       = llm_model.provider.api_key
-        base_url      = llm_model.provider.base_url
+        if isinstance(llm_model, dict):
+            provider_name = llm_model['provider']
+            model_id      = llm_model['model_id']
+            api_key       = llm_model['api_key']
+            base_url      = llm_model.get('base_url', '')
+        else:
+            provider_name = llm_model.provider.provider
+            model_id      = llm_model.model_id
+            api_key       = llm_model.provider.api_key
+            base_url      = llm_model.provider.base_url
 
         def _llm():
             import importlib

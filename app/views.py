@@ -18,6 +18,47 @@ from .aiTools import fetch_schema
 from .aiView import run_nl_query
 
 
+def _resolve_llm_model(model_id_raw, user):
+    """
+    Resolve a model selector ID to either:
+      - an LLMModel instance (user's own model), or
+      - a dict {'provider', 'model_id', 'api_key', 'base_url'} for community models.
+    Returns None if not found.
+    """
+    if model_id_raw is None:
+        return None
+
+    id_str = str(model_id_raw)
+
+    # Community model: "community__{ck_pk}__{idx}"
+    if id_str.startswith('community__'):
+        parts = id_str.split('__')
+        if len(parts) == 3:
+            try:
+                ck = CommunityKey.objects.get(pk=int(parts[1]), is_active=True)
+                models = ck.models_list()
+                idx = int(parts[2])
+                if 0 <= idx < len(models):
+                    model_id, _ = models[idx]
+                    return {
+                        'provider': ck.provider,
+                        'model_id': model_id,
+                        'api_key':  ck.api_key,
+                        'base_url': ck.base_url,
+                    }
+            except (CommunityKey.DoesNotExist, ValueError, IndexError):
+                pass
+        return None
+
+    # User's own model
+    try:
+        return LLMModel.objects.select_related('provider').get(
+            id=int(id_str), user=user
+        )
+    except (LLMModel.DoesNotExist, ValueError):
+        return None
+
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 def login_view(request):
@@ -149,19 +190,11 @@ def ask_view(request, db_id):
     def event_stream():
         import queue, threading
 
-        # Resolve LLM model from user's settings
-        llm_model = None
-        model_id = data.get('model_id')
-        if model_id:
-            try:
-                llm_model = LLMModel.objects.select_related('provider').get(
-                    id=model_id, user=request.user
-                )
-            except LLMModel.DoesNotExist:
-                pass
-        # Fallback: use user's default model
-        if not llm_model:
-            llm_model = LLMModel.objects.filter(
+        # Resolve LLM model from user's settings or community keys
+        resolved = _resolve_llm_model(data.get('model_id'), request.user)
+        if resolved is None:
+            # Fallback: user's default model
+            resolved = LLMModel.objects.filter(
                 user=request.user, is_default=True
             ).select_related('provider').first()
 
@@ -172,7 +205,7 @@ def ask_view(request, db_id):
 
         def run():
             try:
-                result = run_nl_query(question, db, status_cb=status_cb, llm_model=llm_model)
+                result = run_nl_query(question, db, status_cb=status_cb, llm_model=resolved)
                 q.put(('result', result))
             except Exception as e:
                 logger.error(f"[ASK VIEW] Unhandled error: {e}", exc_info=True)
@@ -480,13 +513,30 @@ def delete_model_view(request, model_id):
 
 
 def models_for_chat_view(request):
-    """Returns all user models as JSON — used by chat to populate selector."""
+    """Returns all user models + active community models as JSON."""
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Unauthenticated'}, status=401)
+
+    # User's own models
     models_qs = LLMModel.objects.filter(user=request.user).select_related('provider')
     data = [{'id': m.id, 'display_name': m.display_name, 'model_id': m.model_id,
-              'provider': m.provider.provider, 'is_default': m.is_default}
+              'provider': m.provider.provider, 'is_default': m.is_default,
+              'is_community': False}
              for m in models_qs]
+
+    # Community models — each gets a synthetic string ID: "community__{ck_pk}__{idx}"
+    for ck in CommunityKey.objects.filter(is_active=True):
+        for idx, (mid, mname) in enumerate(ck.models_list()):
+            data.append({
+                'id':           f'community__{ck.pk}__{idx}',
+                'display_name': mname,
+                'model_id':     mid,
+                'provider':     ck.provider,
+                'is_default':   False,
+                'is_community': True,
+            })
+
+    return JsonResponse({'models': data})
     return JsonResponse({'models': data})
 
 
@@ -512,17 +562,14 @@ def dashboard_chart_view(request, db_id):
     if not question:
         return JsonResponse({'error': 'Empty question.'}, status=400)
 
-    llm_model = None
-    if model_id:
-        try:
-            llm_model = LLMModel.objects.select_related('provider').get(id=model_id, user=request.user)
-        except LLMModel.DoesNotExist:
-            pass
-    if not llm_model:
-        llm_model = LLMModel.objects.filter(user=request.user, is_default=True).select_related('provider').first()
+    resolved = _resolve_llm_model(model_id, request.user)
+    if resolved is None:
+        resolved = LLMModel.objects.filter(
+            user=request.user, is_default=True
+        ).select_related('provider').first()
 
     from .aiView import run_chart_query
-    result = run_chart_query(question, db, llm_model=llm_model)
+    result = run_chart_query(question, db, llm_model=resolved)
     return JsonResponse(result)
 
 
