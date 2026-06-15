@@ -18,54 +18,93 @@ logger = logging.getLogger('app.db')
 
 # ── Schema introspection queries ───────────────────────────────────────────────
 
-# PostgreSQL / SQL Server (information_schema, string_agg)
+# PostgreSQL — includes row counts and FK relationships
 _SCHEMA_POSTGRESQL = """
-SELECT string_agg(table_summary, E'\\n') AS ai_ready_schema
-FROM (
+WITH col_info AS (
     SELECT
-        table_name || ' (' ||
-        string_agg(column_name || ' ' || data_type, ', ' ORDER BY ordinal_position)
-        || ')' AS table_summary
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-    GROUP BY table_name
-) AS subquery;
+        c.table_name,
+        string_agg(
+            c.column_name || ' ' || c.data_type
+            || CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN ' PK' ELSE '' END
+            || CASE WHEN fk.column_name IS NOT NULL
+               THEN ' FK→' || ccu.table_name || '.' || ccu.column_name
+               ELSE '' END,
+            ', ' ORDER BY c.ordinal_position
+        ) AS cols
+    FROM information_schema.columns c
+    LEFT JOIN information_schema.key_column_usage kcu
+        ON kcu.table_schema = c.table_schema AND kcu.table_name = c.table_name
+        AND kcu.column_name = c.column_name
+    LEFT JOIN information_schema.table_constraints tc
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.constraint_type = 'PRIMARY KEY'
+    LEFT JOIN information_schema.referential_constraints rc
+        ON rc.constraint_name = kcu.constraint_name
+    LEFT JOIN information_schema.key_column_usage fk
+        ON fk.constraint_name = kcu.constraint_name AND fk.column_name = c.column_name
+    LEFT JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name = rc.unique_constraint_name
+    WHERE c.table_schema = 'public'
+    GROUP BY c.table_name
+),
+row_counts AS (
+    SELECT relname AS table_name, reltuples::bigint AS approx_rows
+    FROM pg_class
+    WHERE relkind = 'r'
+)
+SELECT string_agg(
+    ci.table_name || ' (' || COALESCE(rc.approx_rows,0)::text || ' rows): ' || ci.cols,
+    E'\\n'
+)
+FROM col_info ci
+LEFT JOIN row_counts rc ON rc.table_name = ci.table_name;
 """
 
-# SQL Server uses NVARCHAR / sys.columns — information_schema works but
-# STRING_AGG is available from SQL Server 2017+. We target that.
-_SCHEMA_MSSQL = """
-SELECT STRING_AGG(table_summary, CHAR(10)) AS ai_ready_schema
-FROM (
-    SELECT
-        c.TABLE_NAME + ' (' +
-        STRING_AGG(c.COLUMN_NAME + ' ' + c.DATA_TYPE, ', ')
-        WITHIN GROUP (ORDER BY c.ORDINAL_POSITION)
-        + ')' AS table_summary
-    FROM INFORMATION_SCHEMA.COLUMNS c
-    WHERE c.TABLE_SCHEMA = 'dbo'
-    GROUP BY c.TABLE_NAME
-) AS subquery;
-"""
-
-# MySQL uses GROUP_CONCAT instead of string_agg
+# MySQL — includes row counts from information_schema
 _SCHEMA_MYSQL = """
 SELECT GROUP_CONCAT(table_summary ORDER BY table_name SEPARATOR '\n') AS ai_ready_schema
 FROM (
     SELECT
         CONCAT(
-            TABLE_NAME, ' (',
+            c.TABLE_NAME, ' (', COALESCE(t.TABLE_ROWS, 0), ' rows): ',
             GROUP_CONCAT(
-                CONCAT(COLUMN_NAME, ' ', DATA_TYPE)
-                ORDER BY ORDINAL_POSITION
+                CONCAT(c.COLUMN_NAME, ' ', c.DATA_TYPE,
+                    IF(c.COLUMN_KEY = 'PRI', ' PK', ''),
+                    IF(c.COLUMN_KEY = 'MUL', ' FK', ''))
+                ORDER BY c.ORDINAL_POSITION
                 SEPARATOR ', '
-            ),
-            ')'
+            )
         ) AS table_summary,
-        TABLE_NAME
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-    GROUP BY TABLE_NAME
+        c.TABLE_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS c
+    LEFT JOIN INFORMATION_SCHEMA.TABLES t
+        ON t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_SCHEMA = c.TABLE_SCHEMA
+    WHERE c.TABLE_SCHEMA = DATABASE()
+    GROUP BY c.TABLE_NAME, t.TABLE_ROWS
+) AS subquery;
+"""
+
+# SQL Server
+_SCHEMA_MSSQL = """
+SELECT STRING_AGG(table_summary, CHAR(10)) AS ai_ready_schema
+FROM (
+    SELECT
+        c.TABLE_NAME + ' (' +
+        STRING_AGG(c.COLUMN_NAME + ' ' + c.DATA_TYPE
+            + CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN ' PK' ELSE '' END,
+            ', ')
+        WITHIN GROUP (ORDER BY c.ORDINAL_POSITION)
+        + ')' AS table_summary
+    FROM INFORMATION_SCHEMA.COLUMNS c
+    LEFT JOIN (
+        SELECT ku.TABLE_NAME, ku.COLUMN_NAME
+        FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+        JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
+            ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+        WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+    ) pk ON pk.TABLE_NAME = c.TABLE_NAME AND pk.COLUMN_NAME = c.COLUMN_NAME
+    WHERE c.TABLE_SCHEMA = 'dbo'
+    GROUP BY c.TABLE_NAME
 ) AS subquery;
 """
 
@@ -171,20 +210,63 @@ def _get_connection(db: DatabaseConnection):
 
 def _fetch_sqlite_schema(conn) -> str:
     """
-    SQLite doesn't have information_schema.
-    We iterate all user tables and run PRAGMA table_info() for each.
+    SQLite schema with:
+    - Column names and types
+    - Primary key flags
+    - Foreign key relationships
+    - Row count per table
+    - Up to 5 sample distinct values per text column (so the LLM knows real values)
     """
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name NOT LIKE 'sqlite_%' ORDER BY name;"
+    )
     tables = [row[0] for row in cursor.fetchall()]
 
     lines = []
     for table in tables:
+        # Column info
         cursor.execute(f'PRAGMA table_info("{table}");')
-        cols = cursor.fetchall()
-        # PRAGMA columns: cid, name, type, notnull, dflt_value, pk
-        col_parts = ', '.join(f"{col[1]} {col[2].lower() or 'text'}" for col in cols)
-        lines.append(f"{table} ({col_parts})")
+        cols = cursor.fetchall()  # cid, name, type, notnull, dflt_value, pk
+
+        # Row count
+        try:
+            cursor.execute(f'SELECT COUNT(*) FROM "{table}";')
+            row_count = cursor.fetchone()[0]
+        except Exception:
+            row_count = '?'
+
+        # Foreign keys
+        cursor.execute(f'PRAGMA foreign_key_list("{table}");')
+        fk_rows = cursor.fetchall()  # id, seq, table, from, to, ...
+        fk_map = {fk[3]: f'→{fk[2]}.{fk[4]}' for fk in fk_rows}
+
+        col_parts = []
+        for col in cols:
+            col_name  = col[1]
+            col_type  = col[2].lower() or 'text'
+            pk_flag   = ' PK' if col[5] else ''
+            fk_flag   = f' FK{fk_map[col_name]}' if col_name in fk_map else ''
+
+            # Sample distinct values for text-like columns (not for numeric/blob)
+            sample_hint = ''
+            if any(t in col_type for t in ('text', 'char', 'varchar', 'string', 'name')):
+                try:
+                    cursor.execute(
+                        f'SELECT DISTINCT "{col_name}" FROM "{table}" '
+                        f'WHERE "{col_name}" IS NOT NULL AND "{col_name}" != "" '
+                        f'LIMIT 5;'
+                    )
+                    samples = [str(r[0]) for r in cursor.fetchall() if r[0] is not None]
+                    if samples:
+                        sample_hint = f' [e.g. {", ".join(samples[:5])}]'
+                except Exception:
+                    pass
+
+            col_parts.append(f'{col_name} {col_type}{pk_flag}{fk_flag}{sample_hint}')
+
+        lines.append(f'{table} ({row_count} rows): {", ".join(col_parts)}')
 
     return '\n'.join(lines)
 

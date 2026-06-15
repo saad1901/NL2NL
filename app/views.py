@@ -198,6 +198,19 @@ def ask_view(request, db_id):
                 user=request.user, is_default=True
             ).select_related('provider').first()
 
+        # Fetch last 5 turns for multi-turn context (exclude current question)
+        recent_qs = QueryHistory.objects.filter(
+            database=db, user=request.user
+        ).order_by('-created_at')[:5]
+        recent_history = [
+            {
+                'question': h.question,
+                'sql':      h.generated_sql,
+                'answer':   h.nl_response[:400] if h.nl_response else '',
+            }
+            for h in reversed(list(recent_qs))  # chronological order
+        ]
+
         q = queue.Queue()
 
         def status_cb(step, detail=""):
@@ -205,7 +218,12 @@ def ask_view(request, db_id):
 
         def run():
             try:
-                result = run_nl_query(question, db, status_cb=status_cb, llm_model=resolved)
+                result = run_nl_query(
+                    question, db,
+                    status_cb=status_cb,
+                    llm_model=resolved,
+                    recent_history=recent_history,
+                )
                 q.put(('result', result))
             except Exception as e:
                 logger.error(f"[ASK VIEW] Unhandled error: {e}", exc_info=True)

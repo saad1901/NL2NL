@@ -133,7 +133,8 @@ def run_sql(query: str) -> str:
 
 # ── System prompt ──────────────────────────────────────────────────────────────
 
-def _build_system_prompt(db: DatabaseConnection, schema: str) -> str:
+def _build_system_prompt(db: DatabaseConnection, schema: str,
+                          recent_history: list | None = None) -> str:
     db_type_label = db.get_db_type_display()
     schema_section = (
         f"DATABASE SCHEMA ({db.label}):\n{schema}"
@@ -145,33 +146,60 @@ def _build_system_prompt(db: DatabaseConnection, schema: str) -> str:
         if db.schema_description
         else ""
     )
+
+    # ── Conversation history context (last N turns, token-budget capped) ──────
+    history_section = ""
+    if recent_history:
+        turns = []
+        budget = 2000  # rough character budget for history context
+        for entry in reversed(recent_history):   # newest first
+            q_short = entry['question'][:200]
+            sql_short = entry['sql'][:300] if entry.get('sql') else ''
+            ans_short = entry['answer'][:300] if entry.get('answer') else ''
+            turn = f"Q: {q_short}"
+            if sql_short:
+                turn += f"\nSQL: {sql_short}"
+            if ans_short:
+                turn += f"\nA: {ans_short}"
+            budget -= len(turn)
+            if budget < 0:
+                break
+            turns.append(turn)
+        if turns:
+            history_section = (
+                "\n\nRECENT CONVERSATION HISTORY (oldest first — use for context):\n"
+                + "\n---\n".join(reversed(turns))
+                + "\n"
+            )
+
     return f"""You are a data analyst assistant. The user is connected to a {db_type_label} database labelled "{db.label}".
 
-{schema_section}{user_description}
+{schema_section}{user_description}{history_section}
+
+SCHEMA NOTES:
+- Row counts next to each table tell you how much data exists (e.g. "data (1500 rows)").
+- Sample values shown as [e.g. Toyota, Honda, BMW] are REAL values from the column — use exact spelling.
+- FK→ means a foreign key relationship — use JOINs accordingly.
+- If a column has many duplicate values (e.g. Brand, Category), you almost certainly need GROUP BY
+  when the user asks for summaries, counts, averages, or "per X" questions.
 
 Your job:
-1. Understand the user's plain-English question.
-2. Write a correct SQL query that answers it and call run_sql.
-3. When you receive results, summarise the answer in plain English — clear, concise, no jargon.
+1. Understand the user's plain-English question — consider prior conversation for follow-up context.
+2. Write a correct SQL query and call run_sql.
+3. Summarise the result in plain English — clear, concise, no jargon.
 4. If the query returns no rows, say so clearly.
-5. If the question cannot be answered with SQL (e.g. it is conversational), answer directly without calling the tool.
+5. If the question is conversational (no data needed), answer directly.
 
-IMPORTANT — Schema accuracy:
-- You MUST use the EXACT table and column names shown in the schema above. Never guess or invent names.
-- If you are unsure whether a table or column exists with the exact name, run a small exploratory query first:
-  - SQLite:    SELECT name FROM sqlite_master WHERE type='table'
-  - PostgreSQL/MySQL: SELECT table_name FROM information_schema.tables WHERE table_schema='public'  (or DATABASE())
-  - Or peek at a table: SELECT * FROM <table> LIMIT 3
-- You MAY run up to 8 queries total to explore, verify, and answer the question. Use this ability when:
-  - You are unsure of exact table/column names
-  - The first query returned an error
-  - You need intermediate data to formulate the final query
-- Always finish with a plain-English summary once you have the answer.
+IMPORTANT — Data accuracy:
+- Use EXACT table/column names from the schema. Never guess.
+- Use sample values for string filtering (e.g. WHERE Brand = 'Toyota' not WHERE Brand = 'toyota').
+- When unsure about exact names or values, run an exploratory SELECT DISTINCT query first.
+- Use GROUP BY whenever aggregating (COUNT, SUM, AVG, MAX, MIN) across categories.
+- You may run up to 8 queries to explore, verify, and answer. Use this to check names/values.
 
 Rules:
-- Only SELECT statements. Never INSERT, UPDATE, DELETE, DROP, or any DDL.
-- Always SELECT all columns relevant to the answer — labels, names, numeric/value columns.
-- Limit final results to 100 rows unless the user asks for more.
+- SELECT statements only. Never INSERT, UPDATE, DELETE, DROP, or DDL.
+- Limit final results to 100 rows unless asked for more.
 - Highlight key numbers and insights in your summary.
 """
 
@@ -215,12 +243,14 @@ def _extract_tool_call_from_text(text: str) -> dict | None:
 # ── Main entry point ───────────────────────────────────────────────────────────
 
 def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
-                 llm_model: LLMModel = None) -> dict:
+                 llm_model: LLMModel = None,
+                 recent_history: list | None = None) -> dict:
     """
     Full NL→SQL→NL pipeline.
 
-    llm_model: a LLMModel instance from the database (user's configured model).
-               Falls back to .env LLM_PROVIDER/LLM_MODEL if None.
+    llm_model: LLMModel instance, community dict, or None (falls back to .env).
+    recent_history: list of dicts [{question, sql, answer}, ...] — last N turns
+                    from QueryHistory, for multi-turn context in the system prompt.
     """
 
     def notify(step, detail=""):
@@ -270,7 +300,7 @@ def run_nl_query(question: str, db: DatabaseConnection, status_cb=None,
     llm = _get_llm(tools=[run_sql])
 
     messages = [
-        SystemMessage(content=_build_system_prompt(db, schema)),
+        SystemMessage(content=_build_system_prompt(db, schema, recent_history=recent_history)),
         HumanMessage(content=question),
     ]
 
