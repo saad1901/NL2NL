@@ -3,195 +3,373 @@
 
 {% block extra_head %}
 <style>
-  .feature-card { transition: border-color .2s ease, background .2s ease; }
-  .feature-card:hover { border-color: rgba(92,124,250,0.3); background: rgba(92,124,250,0.04); }
-  .model-pill { transition: all .15s ease; }
+  .feature-card { transition: border-color .2s, background .2s; }
+  .feature-card:hover { border-color: rgba(92,124,250,0.35); background: rgba(92,124,250,0.05); }
+  .model-pill { transition: border-color .15s; }
   .model-pill:hover { border-color: rgba(52,211,153,0.4); }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="min-h-screen gradient-bg">
+<div class="flex h-screen overflow-hidden bg-gray-950">
 
-  <!-- Nav -->
-  <nav class="flex items-center justify-between px-6 py-4 border-b border-white/5">
-    <div class="flex items-center gap-2">
-      <div class="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
-        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <!-- ══════════ LEFT SIDEBAR ══════════ -->
+  <aside class="w-72 flex-shrink-0 flex flex-col border-r border-white/5 bg-gray-900/60 overflow-y-auto scrollbar-thin">
+
+    <!-- Brand -->
+    <div class="flex items-center gap-2.5 px-5 py-5 border-b border-white/5">
+      <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center flex-shrink-0">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
       </div>
       <span class="text-base font-bold text-white">NL<span class="text-brand-400">2</span>SQL</span>
     </div>
-    <div class="flex items-center gap-4">
-      <a href="/settings/" class="text-xs text-gray-500 hover:text-gray-300 transition">Settings</a>
-      <span class="text-xs text-gray-600">·</span>
-      <span class="text-xs text-gray-400">{{ user.first_name|default:user.email }}</span>
-      <a href="/logout/" class="text-xs text-gray-600 hover:text-gray-300 transition">Sign out</a>
-    </div>
-  </nav>
 
-  <div class="max-w-2xl mx-auto px-6 py-10 space-y-10">
-
-    <!-- ── Hero ── -->
-    <div class="space-y-3">
-      <div class="flex items-center gap-2.5 text-xs text-gray-500">
+    <!-- Author note -->
+    <div class="px-5 py-5 border-b border-white/5 space-y-3">
+      <div class="flex items-center gap-2 text-xs text-gray-500">
         <div class="w-5 h-5 rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">S</div>
         <span>by <strong class="text-gray-300">saad1921</strong></span>
-        <span>·</span>
-        <span>Welcome, {{ user.first_name|default:"friend" }} 👋</span>
       </div>
-
-      <h1 class="text-2xl font-bold text-white leading-snug">
-        Your databases, in plain English.
-      </h1>
-
-      <p class="text-gray-400 text-sm leading-relaxed">
-        NL2SQL lets you ask questions about your data the way you'd ask a colleague —
-        no SQL, no formulas, no waiting for a report. Type a question, get an answer, build a chart.
-        Think Power BI or Tableau, but driven by a conversation.
+      <p class="text-xs text-gray-400 leading-relaxed">
+        Built this because I was tired of writing the same
+        <code class="bg-white/8 px-1 py-0.5 rounded text-brand-300 font-mono">SELECT</code>
+        queries every day. Now I just ask.
       </p>
+      <div class="flex flex-wrap gap-1.5 pt-1">
+        <a href="https://github.com/saad1921/NL2NL" target="_blank"
+           class="text-xs text-gray-600 hover:text-brand-400 transition flex items-center gap-1">
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.68-.22.68-.48v-1.7C6.73 19.91 6.14 18 6.14 18c-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0112 6.8c.85.004 1.71.115 2.51.337 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10.01 10.01 0 0022 12c0-5.52-4.48-10-10-10z"/></svg>
+          GitHub
+        </a>
+        <span class="text-gray-700">·</span>
+        <a href="/docs/" class="text-xs text-gray-600 hover:text-brand-400 transition">Docs</a>
+      </div>
     </div>
 
-    <!-- ── Free models callout ── -->
-    <div class="rounded-2xl border overflow-hidden"
-         style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.04)">
-      <div class="flex items-center gap-2.5 px-5 py-3 border-b" style="border-color:rgba(52,211,153,0.15)">
-        <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0"></div>
-        <p class="text-sm font-semibold text-white">You're already set up</p>
-        <span class="ml-auto tag bg-green-500/10 text-green-400 text-xs">No API key needed</span>
+    <!-- What's available -->
+    <div class="px-5 py-5 border-b border-white/5 space-y-2">
+      <p class="text-xs text-gray-600 uppercase tracking-wider mb-3">What's inside</p>
+
+      <div class="flex items-start gap-2.5">
+        <span class="text-base leading-none mt-0.5">💬</span>
+        <div>
+          <p class="text-xs font-medium text-gray-200">Chat interface</p>
+          <p class="text-xs text-gray-600 mt-0.5">Ask questions, get tables + summaries</p>
+        </div>
       </div>
-      <div class="px-5 py-4 space-y-3">
-        <p class="text-xs text-gray-400 leading-relaxed">
-          I've added free AI models to this instance so you can start immediately — no signups, no keys, nothing.
-          These appear in the model selector on the chat page.
-        </p>
-        {% if community_keys %}
-        <div class="space-y-2">
-          {% for key in community_keys %}
-          {% with models=key.models_list %}
-          {% for model_id, model_name in models %}
-          <div class="model-pill flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/3 border border-white/5">
-            <div class="w-6 h-6 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0">
-              <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+      <div class="flex items-start gap-2.5">
+        <span class="text-base leading-none mt-0.5">📊</span>
+        <div>
+          <p class="text-xs font-medium text-gray-200">Power BI–style dashboards</p>
+          <p class="text-xs text-gray-600 mt-0.5">AI-generated charts, pinned per database</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-2.5">
+        <span class="text-base leading-none mt-0.5">📁</span>
+        <div>
+          <p class="text-xs font-medium text-gray-200">Upload CSV / Excel</p>
+          <p class="text-xs text-gray-600 mt-0.5">Instant SQLite — no server needed</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-2.5">
+        <span class="text-base leading-none mt-0.5">🔁</span>
+        <div>
+          <p class="text-xs font-medium text-gray-200">Self-correcting AI</p>
+          <p class="text-xs text-gray-600 mt-0.5">Retries & fixes SQL automatically</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-2.5">
+        <span class="text-base leading-none mt-0.5">🔌</span>
+        <div>
+          <p class="text-xs font-medium text-gray-200">PostgreSQL · MySQL · SQLite · MSSQL</p>
+          <p class="text-xs text-gray-600 mt-0.5">Connect any SQL database</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav links -->
+    <nav class="px-3 py-4 space-y-0.5 flex-1">
+      <a href="/settings/" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-gray-200 hover:bg-white/5 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        Settings
+      </a>
+      <a href="/databases/" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-gray-200 hover:bg-white/5 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/>
+        </svg>
+        Manage Databases
+      </a>
+      <a href="/docs/" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-gray-200 hover:bg-white/5 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+        Docs
+      </a>
+    </nav>
+
+    <!-- User -->
+    <div class="border-t border-white/5 px-4 py-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+          {{ user.first_name.0|default:"U" }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-medium text-gray-200 truncate">{{ user.get_full_name|default:user.username }}</p>
+          <p class="text-xs text-gray-600 truncate">{{ user.email }}</p>
+        </div>
+        <a href="/logout/" class="text-gray-600 hover:text-gray-300 transition" title="Sign out">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN CONTENT ══════════ -->
+  <main class="flex-1 overflow-y-auto scrollbar-thin">
+
+    <!-- Top bar -->
+    <header class="flex items-center justify-between px-8 py-4 border-b border-white/5 bg-gray-900/40 sticky top-0 z-10">
+      <div>
+        <h1 class="text-sm font-semibold text-white">Welcome, {{ user.first_name|default:"there" }} 👋</h1>
+        <p class="text-xs text-gray-500 mt-0.5">Connect a database to get started</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="toggleTheme()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-500 hover:text-gray-300 transition">
+          <svg class="theme-icon-dark w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <svg class="theme-icon-light w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+        <button onclick="openAddDbModal()"
+          class="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl transition glow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Connect Database
+        </button>
+      </div>
+    </header>
+
+    <div class="p-8 space-y-8">
+
+      <!-- ── Two-column: Hero left, Models right ── -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Hero card -->
+        <div class="glass rounded-2xl p-7 border border-white/5 flex flex-col justify-between space-y-6">
+          <div class="space-y-3">
+            <h2 class="text-xl font-bold text-white leading-snug">
+              Talk to your databases.<br/>
+              <span class="text-brand-400">No SQL required.</span>
+            </h2>
+            <p class="text-sm text-gray-400 leading-relaxed">
+              Type a question in plain English. The AI writes the SQL, runs it against your database,
+              and returns the answer — as a table, a chart, or a plain summary.
+              Think Power BI or Tableau, but driven entirely by conversation.
+            </p>
+          </div>
+          <div class="space-y-2.5">
+            <p class="text-xs text-gray-600 uppercase tracking-wider">Try asking things like</p>
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/3 border border-white/5">
+                <svg class="w-3 h-3 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                <span class="text-xs text-gray-300">Show me the top 10 customers by revenue</span>
+              </div>
+              <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/3 border border-white/5">
+                <svg class="w-3 h-3 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                <span class="text-xs text-gray-300">Average order value by month</span>
+              </div>
+              <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/3 border border-white/5">
+                <svg class="w-3 h-3 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                <span class="text-xs text-gray-300">Which products have the most returns</span>
+              </div>
+              <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/3 border border-white/5">
+                <svg class="w-3 h-3 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                <span class="text-xs text-gray-300">Sales growth compared to last quarter</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Community models + AI options card -->
+        <div class="space-y-4">
+
+          <!-- Free models -->
+          <div class="rounded-2xl border overflow-hidden" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.03)">
+            <div class="flex items-center gap-2.5 px-5 py-3 border-b" style="border-color:rgba(52,211,153,0.15)">
+              <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0"></div>
+              <p class="text-sm font-semibold text-white">Free AI models — ready now</p>
+              <span class="ml-auto tag bg-green-500/10 text-green-400 text-xs">No key needed</span>
+            </div>
+            <div class="px-5 py-4 space-y-2.5">
+              <p class="text-xs text-gray-400 leading-relaxed">
+                These appear automatically in the model selector on the chat page. Nothing to configure.
+              </p>
+              {% if community_keys %}
+                {% for key in community_keys %}
+                {% with models=key.models_list %}
+                {% for model_id, model_name in models %}
+                <div class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/3 border border-white/5 hover:border-green-500/20 transition">
+                  <div class="w-6 h-6 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-white truncate">{{ model_name }}</p>
+                    <p class="text-xs text-gray-600 font-mono truncate">{{ model_id }}</p>
+                  </div>
+                  <span class="tag bg-green-500/10 text-green-400 text-xs flex-shrink-0">Free</span>
+                </div>
+                {% endfor %}
+                {% endwith %}
+                {% endfor %}
+              {% else %}
+              <p class="text-xs text-gray-500 italic">No community models configured yet.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Want your own key -->
+          <div class="glass rounded-2xl p-4 border border-white/5 space-y-3">
+            <p class="text-xs font-medium text-gray-300">Want higher limits or full privacy?</p>
+            <div class="grid grid-cols-2 gap-2">
+              <a href="https://aistudio.google.com/apikey" target="_blank"
+                 class="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/8 border border-blue-500/15 hover:border-blue-500/30 transition">
+                <div class="w-5 h-5 rounded bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div>
+                  <p class="text-xs font-medium text-gray-200">Gemini</p>
+                  <p class="text-xs text-gray-600">Free · 1500/day</p>
+                </div>
+              </a>
+              <a href="https://openrouter.ai/keys" target="_blank"
+                 class="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/8 border border-purple-500/15 hover:border-purple-500/30 transition">
+                <div class="w-5 h-5 rounded bg-purple-500/15 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div>
+                  <p class="text-xs font-medium text-gray-200">OpenRouter</p>
+                  <p class="text-xs text-gray-600">50+ free models</p>
+                </div>
+              </a>
+              <a href="/settings/" class="col-span-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-500/8 border border-white/5 hover:border-white/15 transition">
+                <div class="w-5 h-5 rounded bg-gray-500/15 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+                <div>
+                  <p class="text-xs font-medium text-gray-200">Ollama — fully local &amp; offline</p>
+                  <p class="text-xs text-gray-600">Configure in Settings → Providers</p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Connect a database ── -->
+      <div class="glass rounded-2xl border border-brand-500/20 overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-brand-500/15 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"/>
               </svg>
             </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <p class="text-sm font-medium text-white">{{ model_name }}</p>
-                <span class="tag bg-green-500/10 text-green-400 text-xs">Community · Free</span>
-              </div>
-              <p class="text-xs text-gray-600 font-mono mt-0.5">{{ model_id }}</p>
-            </div>
-            <span class="text-xs text-gray-600">{{ key.get_provider_display }}</span>
-          </div>
-          {% endfor %}
-          {% endwith %}
-          {% endfor %}
-        </div>
-        {% else %}
-        <p class="text-xs text-gray-500 italic">Community models loading — check back shortly.</p>
-        {% endif %}
-        <p class="text-xs text-gray-600 pt-1">
-          Want more speed or privacy?
-          <a href="/settings/" class="text-brand-400 hover:underline">Add your own API key</a>
-          (Gemini, OpenAI, OpenRouter) or
-          <a href="/settings/" class="text-brand-400 hover:underline">use Ollama locally</a> — entirely offline.
-        </p>
-      </div>
-    </div>
-
-    <!-- ── One step to get started ── -->
-    <div>
-      <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">One step to get started</p>
-      <div class="glass rounded-2xl p-5 border border-brand-500/20">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-          <div class="flex gap-3.5">
-            <div class="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5">1</div>
             <div>
-              <h3 class="text-sm font-semibold text-white mb-1">Connect a database or upload a file</h3>
-              <p class="text-xs text-gray-400 leading-relaxed max-w-lg">
-                Connect PostgreSQL, MySQL, SQL Server, or a local SQLite file.
-                Or — even simpler — just upload a <strong class="text-gray-200">CSV or Excel file</strong>.
-                It gets converted to a queryable database automatically. Perfect for getting a feel for things.
-              </p>
+              <p class="text-sm font-semibold text-white">Connect your first database</p>
+              <p class="text-xs text-gray-500 mt-0.5">PostgreSQL · MySQL · SQL Server · SQLite · or upload a CSV/Excel file</p>
             </div>
           </div>
           <button onclick="openAddDbModal()"
-            class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl transition glow-sm">
+            class="flex items-center gap-1.5 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl transition glow-sm flex-shrink-0">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
             Connect / Upload
           </button>
         </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5 px-0">
+          <div class="px-5 py-4">
+            <p class="text-xs text-gray-600 mb-1">SQL databases</p>
+            <p class="text-sm font-medium text-gray-300">PostgreSQL, MySQL,<br/>SQL Server, SQLite</p>
+          </div>
+          <div class="px-5 py-4">
+            <p class="text-xs text-gray-600 mb-1">File upload</p>
+            <p class="text-sm font-medium text-gray-300">CSV, XLS, XLSX<br/>→ instant SQLite</p>
+          </div>
+          <div class="px-5 py-4">
+            <p class="text-xs text-gray-600 mb-1">Schema handling</p>
+            <p class="text-sm font-medium text-gray-300">Auto-fetched &amp;<br/>cached per connection</p>
+          </div>
+          <div class="px-5 py-4">
+            <p class="text-xs text-gray-600 mb-1">Multiple databases</p>
+            <p class="text-sm font-medium text-gray-300">Each gets its own<br/>chat history &amp; dashboard</p>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- ── What you unlock ── -->
-    <div>
-      <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">What you unlock</p>
-      <div class="grid grid-cols-2 gap-3">
-
-        <div class="feature-card glass rounded-xl p-4 border border-white/5">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl leading-none">💬</span>
-            <p class="text-sm font-semibold text-white">Natural language chat</p>
+      <!-- ── Dashboard feature highlight ── -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="feature-card glass rounded-2xl p-5 border border-white/5 md:col-span-2">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl leading-none">📊</span>
+            <div>
+              <p class="text-sm font-semibold text-white">Power BI–style dashboards</p>
+              <p class="text-xs text-gray-500">Describe a chart, the AI builds it</p>
+            </div>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">
-            Ask anything — "top 10 customers by revenue", "average order value last month".
-            Get a table, a summary, and the SQL it ran.
+          <p class="text-xs text-gray-400 leading-relaxed mb-3">
+            Once you're connected, hit the <strong class="text-gray-200">Dashboard</strong> button on any chat page.
+            Describe what you want to see — "monthly revenue trend", "top 10 products by sales" —
+            and the AI writes the query and renders an interactive ECharts visualisation.
+            Bar, line, pie, scatter, radar, funnel. All pinned and saved per database.
+            Expand any chart fullscreen for a presentation-ready view.
           </p>
-        </div>
-
-        <div class="feature-card glass rounded-xl p-4 border border-white/5">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl leading-none">📊</span>
-            <p class="text-sm font-semibold text-white">Power BI–style dashboards</p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="tag bg-white/5 text-gray-400 text-xs">Bar</span>
+            <span class="tag bg-white/5 text-gray-400 text-xs">Line</span>
+            <span class="tag bg-white/5 text-gray-400 text-xs">Pie</span>
+            <span class="tag bg-white/5 text-gray-400 text-xs">Scatter</span>
+            <span class="tag bg-white/5 text-gray-400 text-xs">Radar</span>
+            <span class="tag bg-white/5 text-gray-400 text-xs">Funnel</span>
+            <span class="tag bg-purple-500/15 text-purple-300 text-xs">Fullscreen expand</span>
+            <span class="tag bg-brand-500/15 text-brand-300 text-xs">Saved per database</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">
-            Describe a chart and the AI builds it — bar, line, pie, scatter, radar.
-            Pin charts to a persistent dashboard per database.
-            Expand any chart fullscreen for presentations.
-          </p>
         </div>
-
-        <div class="feature-card glass rounded-xl p-4 border border-white/5">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl leading-none">📁</span>
-            <p class="text-sm font-semibold text-white">Upload & query instantly</p>
+        <div class="space-y-4">
+          <div class="feature-card glass rounded-2xl p-5 border border-white/5">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xl leading-none">🔁</span>
+              <p class="text-sm font-semibold text-white">Self-correcting AI</p>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">
+              If a query fails, the AI checks the schema, fixes the SQL, and retries — up to 8 times.
+              You almost never see an error.
+            </p>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">
-            No database server needed. Drop a CSV or Excel file — it becomes a full SQLite database
-            you can query with plain English straight away.
-          </p>
-        </div>
-
-        <div class="feature-card glass rounded-xl p-4 border border-white/5">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl leading-none">🔁</span>
-            <p class="text-sm font-semibold text-white">Self-correcting AI</p>
+          <div class="feature-card glass rounded-2xl p-5 border border-white/5">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xl leading-none">🔍</span>
+              <p class="text-sm font-semibold text-white">View SQL toggle</p>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">
+              Every answer shows the generated SQL. Toggle it per message or globally with Show SQL.
+            </p>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">
-            If a query fails, the AI checks the schema, corrects the SQL, and retries automatically —
-            up to 8 times. You almost never see an error.
-          </p>
         </div>
-
       </div>
-    </div>
 
-    <!-- ── Footer ── -->
-    <div class="border-t border-white/5 pt-5 flex items-center justify-between text-xs text-gray-600">
-      <span>Built by <a href="https://github.com/saad1921" target="_blank" class="text-brand-400 hover:underline">saad1921</a></span>
-      <div class="flex items-center gap-4">
-        <a href="https://github.com/saad1921/NL2NL" target="_blank" class="hover:text-gray-300 transition">GitHub</a>
-        <a href="/docs/" class="hover:text-gray-300 transition">Docs</a>
-        <button onclick="toggleTheme()" class="hover:text-gray-300 transition">Toggle theme</button>
-      </div>
     </div>
-
-  </div>
+  </main>
 </div>
 {% endblock %}
