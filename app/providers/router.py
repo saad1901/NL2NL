@@ -26,7 +26,7 @@ if LLM_PROVIDER not in _SUPPORTED:
         f"Choose one of: {', '.join(_SUPPORTED)}"
     )
 
-logger.info(f"[PROVIDER] Using {LLM_PROVIDER} / {LLM_MODEL}")
+# logger.info(f"[PROVIDER] Using {LLM_PROVIDER} / {LLM_MODEL}")
 
 # Lazy-import the provider module
 _provider = importlib.import_module(f"app.providers.{LLM_PROVIDER}")
