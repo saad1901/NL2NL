@@ -1,24 +1,27 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
-<img src="https://img.shields.io/badge/Django-6.0-092E20?style=for-the-badge&logo=django&logoColor=white"/>
-<img src="https://img.shields.io/badge/LangChain-1.3+-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white"/>
-<img src="https://img.shields.io/badge/Apache_ECharts-5.4-AA344D?style=for-the-badge&logo=apache&logoColor=white"/>
+# NL2SQL
 
-<br/><br/>
+<img src="https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12+" />
+<img src="https://img.shields.io/badge/Django-6.0-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django 6.0" />
+<img src="https://img.shields.io/badge/LangChain-1.3+-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white" alt="LangChain 1.3+" />
+<img src="https://img.shields.io/badge/Apache_ECharts-5.4-AA344D?style=for-the-badge&logo=apache&logoColor=white" alt="Apache ECharts 5.4" />
 
+<br />
+<br />
+
+```text
+███╗   ██╗██╗     ██████╗ ███████╗ ██████╗ ██╗     
+████╗  ██║██║     ╚════██╗██╔════╝██╔═══██╗██║     
+██╔██╗ ██║██║      █████╔╝███████╗██║   ██║██║     
+██║╚██╗██║██║     ██╔═══╝ ╚════██║██║▄▄ ██║██║     
+██║ ╚████║███████╗███████╗███████║╚██████╔╝███████╗
+╚═╝  ╚═══╝╚══════╝╚══════╝╚══════╝ ╚══▀▀═╝ ╚══════╝
 ```
-  _   _ _     ____  ____   ___  _
-| \ | | |   |___ \/ ___| / _ \| |
-|  \| | |     __) \___ \| | | | |
-| |\  | |___ / __/ ___) | |_| | |___
-|_| \_|_____|_____|____/ \__\_\_____|
-```
 
-### **Talk to your databases in plain English**
-*Query any SQL database without writing a single line of SQL*
+### Talk to your databases in plain English
 
-<br/>
+*Query any SQL database without writing a single line of SQL.*
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-nl2nlbysaad.pythonanywhere.com-5c7cfa?style=for-the-badge)](https://nl2nlbysaad.pythonanywhere.com/)
 
@@ -28,20 +31,29 @@
 
 ## What is NL2SQL?
 
-NL2SQL is a full-stack Django application that bridges the gap between business users and their data. Type a question in plain English — the system writes the SQL, runs it, and hands back a clean answer with tables, charts, and a natural-language summary.
+NL2SQL is a full-stack Django application that turns natural-language questions into executable SQL, runs the query safely, and returns results as tables, charts, and clear summaries.
 
-No SQL knowledge required. No waiting for an analyst.
+That means business users can explore data with plain English instead of writing SQL by hand.
 
-```
-"Show me the top 10 customers by revenue this quarter"
-        ↓  LangChain + LLM  ↓
+```text
+“Show me the top 10 customers by revenue this quarter”
+                │
+                ▼
+        LangChain + LLM reasoning
+                │
+                ▼
 SELECT customer_name, SUM(revenue) AS total
 FROM orders
 WHERE created_at >= DATE_TRUNC('quarter', NOW())
 GROUP BY customer_name
-ORDER BY total DESC LIMIT 10;
-        ↓  Execute + Summarise  ↓
-"Acme Corp leads with $142k, followed by ..."  📊
+ORDER BY total DESC
+LIMIT 10;
+                │
+                ▼
+     Execute + summarise + visualise
+                │
+                ▼
+“Acme Corp leads with $142k, followed by ...”  📊
 ```
 
 ---
@@ -49,95 +61,96 @@ ORDER BY total DESC LIMIT 10;
 ## ✨ Features
 
 <table>
-<tr>
-<td width="50%">
+  <tr>
+    <td width="50%" valign="top">
 
-**🧠 Agentic Query Pipeline**
+### 🧠 Agentic Query Pipeline
 - Up to 8 LLM iterations per question
-- Self-corrects on SQL errors automatically
-- Exploratory queries to verify schema names
-- Multi-step reasoning for complex questions
+- Auto-corrects SQL errors
+- Runs exploratory queries for schema validation
+- Handles multi-step reasoning for complex requests
 
-**📊 Interactive Dashboard**
+### 📊 Interactive Dashboard
 - AI-generated ECharts visualisations
-- Bar, line, pie, scatter, radar, funnel charts
-- Persistent charts saved per database
-- Expand to fullscreen, refresh, export PNG
+- Supports bar, line, pie, scatter, radar, and funnel charts
+- Saves charts per database
+- Fullscreen, refresh, and PNG export actions
 
-</td>
-<td width="50%">
+  </td>
+    <td width="50%" valign="top">
 
-**🔌 Multi-Provider LLM Support**
-- Google Gemini (free tier)
+### 🔌 Multi-Provider LLM Support
+- Google Gemini
 - OpenAI GPT models
 - Anthropic Claude
-- OpenRouter (50+ free models)
-- Ollama (fully local / offline)
+- OpenRouter
+- Ollama for local/offline usage
 
-**🗄️ Flexible Database Connections**
+### 🗄️ Flexible Database Connections
 - PostgreSQL, MySQL, SQL Server, SQLite
-- CSV / Excel → auto-converted to SQLite
-- Schema auto-fetch and caching
-- Label-only mode (credentials per session)
+- CSV / Excel files auto-converted to SQLite
+- Schema caching and auto-fetch
+- Session-scoped credential mode
 
-</td>
-</tr>
-<tr>
-<td>
+  </td>
+  </tr>
+  <tr>
+    <td valign="top">
 
-**💬 Rich Chat Interface**
+### 💬 Rich Chat Interface
 - Streaming SSE responses with live status
-- Markdown rendering (tables, bold, code)
+- Markdown rendering for tables, code, and formatting
 - Toggle SQL visibility per message
-- Full query history with export
+- Exportable query history
 
-</td>
-<td>
+  </td>
+    <td valign="top">
 
-**⚙️ Admin & Management**
-- Full Django admin with query viewer
+### ⚙️ Admin & Management
+- Full Django admin integration
 - Per-user database management
-- Schema browser with column types
+- Schema browser with column metadata
 - Dark/light theme toggle
 
-</td>
-</tr>
+  </td>
+  </tr>
 </table>
 
 ---
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Browser (Tailwind + Vanilla JS)      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │  Chat UI     │  │  Dashboard   │  │  DB Manager  │  │
-│  │  (SSE stream)│  │  (ECharts)   │  │  (CRUD)      │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
-└─────────┼─────────────────┼─────────────────┼───────────┘
-          │                 │                 │
-┌─────────▼─────────────────▼─────────────────▼───────────┐
-│                    Django 6  (views.py)                   │
-│         ask_view │ dashboard_chart_view │ databases_view  │
-└─────────────────────┬───────────────────────────────────-┘
-                      │
-┌─────────────────────▼────────────────────────────────────┐
-│               aiView.py  —  Agentic Loop                  │
-│                                                           │
-│   ┌──────────┐    ┌───────────┐    ┌───────────────┐    │
-│   │ System   │    │  LLM call │    │  run_sql tool │    │
-│   │ Prompt + │───▶│ (iter 1-8)│───▶│  execute_query│    │
-│   │ Schema   │    │           │◀───│  → feed back  │    │
-│   └──────────┘    └───────────┘    └───────────────┘    │
-│                     ↓ text reply                          │
-│                   Summary LLM → nl_response               │
-└──────────────────────────────────────────────────────────┘
-                      │
-┌─────────────────────▼────────────────────────────────────┐
-│               Provider Layer  (app/providers/)            │
-│   gemini │ openai │ anthropic │ openrouter │ ollama       │
-└──────────────────────────────────────────────────────────┘
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                Browser (Tailwind CSS + Vanilla JS)          │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐    │
+│  │   Chat UI    │   │  Dashboard   │   │  DB Manager  │    │
+│  │ (SSE stream) │   │  (ECharts)   │   │   (CRUD)     │    │
+│  └──────┬───────┘   └──────┬───────┘   └──────┬───────┘    │
+└─────────┼──────────────────┼──────────────────┼─────────────┘
+          │                  │                  │
+┌─────────▼──────────────────▼──────────────────▼─────────────┐
+│                     Django 6 (views.py)                     │
+│         ask_view | dashboard_chart_view | databases_view    │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│                  aiView.py — Agentic Loop                   │
+│                                                              │
+│   ┌──────────┐   ┌────────────┐   ┌──────────────────────┐  │
+│   │ System   │   │  LLM call  │   │     run_sql tool     │  │
+│   │ Prompt + │──▶│ (iter 1-8) │──▶│    execute_query     │  │
+│   │ Schema   │   │            │◀──│   feedback on error  │  │
+│   └──────────┘   └────────────┘   └──────────────────────┘  │
+│                         │                                    │
+│                         ▼                                    │
+│               Summary LLM → nl_response                      │
+└──────────────────────────────────────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│                 Provider Layer (app/providers/)             │
+│        gemini | openai | anthropic | openrouter | ollama   │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -152,37 +165,27 @@ ORDER BY total DESC LIMIT 10;
 ### Installation
 
 ```bash
-# Clone
 git clone https://github.com/saad1901/NL2NL.git
 cd NL2NL
-
-# Install dependencies & run migrations
 uv run python manage.py migrate
-
-# Create an admin account
 uv run python manage.py createsuperuser
-
-# Start the dev server
 uv run python manage.py runserver
 ```
 
-Open **http://127.0.0.1:8000** — register an account and add your first database.
+Open **http://127.0.0.1:8000**, register an account, and add your first database.
 
 ### Environment Variables (optional)
 
 Copy `.Example_env` to `.env` and fill in defaults:
 
 ```env
-# Fallback LLM if no model configured in UI
-LLM_PROVIDER=gemini          # gemini | openai | anthropic | openrouter | ollama
+LLM_PROVIDER=gemini
 LLM_MODEL=gemini-2.0-flash
 GEMINI_API_KEY=your_key_here
-
-# Ollama (local)
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-> LLM credentials can also be configured per-user directly in the **Settings** page — no `.env` needed.
+> LLM credentials can also be configured per-user directly in the **Settings** page, so a `.env` file is optional.
 
 ---
 
@@ -194,8 +197,9 @@ OLLAMA_BASE_URL=http://localhost:11434
 | [OpenRouter](https://openrouter.ai/keys) | Multiple free models | Variety, no billing |
 | [Ollama](https://ollama.com) | Unlimited (local) | Privacy, offline use |
 
-**Recommended free models on OpenRouter:**
-```
+### Recommended free OpenRouter models
+
+```text
 google/gemma-3-27b-it:free
 deepseek/deepseek-chat-v3-0324:free
 meta-llama/llama-3.3-70b-instruct:free
@@ -205,30 +209,30 @@ meta-llama/llama-3.3-70b-instruct:free
 
 ## 📁 Project Structure
 
-```
+```text
 NL2SQL/
 ├── app/
-│   ├── models.py          # DatabaseConnection, QueryHistory, LLMProvider, DashboardChart
-│   ├── views.py           # All HTTP views + SSE streaming endpoint
-│   ├── aiView.py          # Agentic LLM pipeline (run_nl_query, run_chart_query)
-│   ├── aiTools.py         # Schema fetch, query execution, DB drivers
-│   ├── admin.py           # Full Django admin with query viewer
+│   ├── models.py
+│   ├── views.py
+│   ├── aiView.py
+│   ├── aiTools.py
+│   ├── admin.py
 │   └── providers/
-│       ├── gemini.py      # Google Gemini
-│       ├── openai.py      # OpenAI
-│       ├── anthropic.py   # Anthropic Claude
-│       ├── openrouter.py  # OpenRouter
-│       ├── ollama.py      # Ollama (local)
-│       └── router.py      # .env-based provider selector
+│       ├── gemini.py
+│       ├── openai.py
+│       ├── anthropic.py
+│       ├── openrouter.py
+│       ├── ollama.py
+│       └── router.py
 ├── templates/
-│   ├── base.html          # Tailwind config, theme toggle, Add DB modal
-│   ├── chat.html          # Main chat + dashboard panel (1400+ lines)
-│   ├── databases.html     # DB management with schema viewer
-│   └── settings.html      # LLM provider & model configuration
+│   ├── base.html
+│   ├── chat.html
+│   ├── databases.html
+│   └── settings.html
 ├── NL2SQL2/
 │   ├── settings.py
 │   └── urls.py
-├── user_data/             # Per-user SQLite files (CSV/Excel uploads)
+├── user_data/
 ├── pyproject.toml
 └── .Example_env
 ```
@@ -239,36 +243,36 @@ NL2SQL/
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| **Backend** | Django 6.0, Python 3.12 | Web framework, ORM, auth |
-| **AI Orchestration** | LangChain 1.3+ | Tool-calling, multi-step agents |
-| **LLM Providers** | Gemini, OpenAI, Anthropic, OpenRouter, Ollama | SQL generation & summarisation |
-| **SQL Parsing** | `sqlglot` | Validation, dialect normalisation |
-| **Frontend** | Tailwind CSS (CDN), Vanilla JS | UI, no build step |
-| **Charts** | Apache ECharts 5.4 | Interactive visualisations |
-| **Markdown** | marked.js 12 | Rendering LLM responses |
-| **DB Drivers** | psycopg2, pymysql, sqlite3 | PostgreSQL, MySQL, SQLite |
-| **Package Manager** | `uv` | Fast Python dependency management |
+| Backend | Django 6.0, Python 3.12 | Web framework, ORM, auth |
+| AI Orchestration | LangChain 1.3+ | Tool-calling and agent workflows |
+| LLM Providers | Gemini, OpenAI, Anthropic, OpenRouter, Ollama | SQL generation and summarisation |
+| SQL Parsing | `sqlglot` | Validation and dialect normalisation |
+| Frontend | Tailwind CSS, Vanilla JS | UI with no build step |
+| Charts | Apache ECharts 5.4 | Interactive visualisations |
+| Markdown | marked.js 12 | Response rendering |
+| DB Drivers | psycopg2, pymysql, sqlite3 | Database connectivity |
+| Package Manager | `uv` | Fast dependency management |
 
 ---
 
 ## 📸 Screenshots
 
-> Chat interface with streaming responses and result table
+> Chat interface with streaming responses and a result table
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │  NL2SQL  │  Cars Dataset 1  [Dashboard]             │
 ├──────────┼──────────────────────────────────────────┤
 │          │                                          │
-│  Databases│  You: Show top 5 cars by price          │
-│           │                                         │
-│  Settings │  🤖 Here are the 5 most expensive...   │
-│           │  ┌─────────────────────────────────┐    │
-│  Docs     │  │ Brand  │ Model    │ Price       │    │
-│           │  │ Audi   │ RS7      │ 8,900,000   │    │
-│           │  │ BMW    │ X5       │ 4,950,000   │    │
-│           │  └─────────────────────────────────┘    │
-│           │  [View SQL] [CSV] [Copy MD]              │
+│ Databases│  You: Show top 5 cars by price           │
+│          │                                          │
+│ Settings │  🤖 Here are the 5 most expensive...    │
+│          │  ┌─────────────────────────────────┐     │
+│ Docs     │  │ Brand │ Model │ Price           │     │
+│          │  │ Audi  │ RS7   │ 8,900,000       │     │
+│          │  │ BMW   │ X5    │ 4,950,000       │     │
+│          │  └─────────────────────────────────┘     │
+│          │  [View SQL] [CSV] [Copy MD]              │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -276,21 +280,21 @@ NL2SQL/
 
 ## 🔒 Security Notes
 
-- Database passwords are stored plain-text in development — encrypt with Fernet before any production deployment
-- `DEBUG = True` and `SECRET_KEY` is the Django default — change both for production
-- All generated SQL is validated as `SELECT`-only before execution — no write operations possible
-- API keys are masked in the admin panel and never exposed in responses
+- Database passwords are currently stored in plain text during development; encrypt them before production deployment.
+- `DEBUG = True` and the default `SECRET_KEY` should both be changed before production use.
+- Generated SQL is validated as `SELECT`-only before execution.
+- API keys are masked in the admin panel and never exposed in model responses.
 
 ---
 
 ## 🗺️ Roadmap
 
 - [ ] Fernet encryption for stored database credentials
-- [ ] Production deployment guide (Docker + Nginx)
+- [ ] Production deployment guide with Docker + Nginx
 - [ ] CSV/Excel export from chat results
 - [ ] Chart PNG export from dashboard
-- [ ] Query sharing / public links
-- [ ] Scheduled queries & email reports
+- [ ] Query sharing or public links
+- [ ] Scheduled queries and email reports
 - [ ] Multi-tenant SaaS mode
 
 ---
@@ -311,6 +315,6 @@ NL2SQL/
 
 <div align="center">
 
-*Built with ☕ and too many LLM API calls*
+### Built with ☕, agents, and too many LLM API calls
 
 </div>
