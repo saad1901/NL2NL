@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import DatabaseConnection, QueryHistory, LLMProvider, LLMModel, DashboardChart
+from .models import DatabaseConnection, QueryHistory, LLMProvider, LLMModel, DashboardChart, CommunityKey
 
 
 # ── Admin site customisation ───────────────────────────────────────────────────
@@ -509,3 +509,51 @@ class DashboardChartAdmin(admin.ModelAdmin):
             f'border:1px solid #374151">{escape(obj.sql)}</pre>'
         )
     sql_block.short_description = "SQL"
+
+
+# ── CommunityKey ───────────────────────────────────────────────────────────────
+
+@admin.register(CommunityKey)
+class CommunityKeyAdmin(admin.ModelAdmin):
+    list_display  = ('display_name', 'provider_badge', 'masked_key_col',
+                     'model_count', 'note', 'is_active', 'created_at')
+    list_filter   = ('provider', 'is_active')
+    search_fields = ('display_name', 'note', 'model_ids')
+    list_editable = ('is_active',)
+    ordering      = ('provider', 'display_name')
+
+    fieldsets = (
+        ('Provider', {
+            'fields': ('provider', 'display_name', 'api_key', 'base_url', 'is_active'),
+        }),
+        ('Models', {
+            'fields': ('model_ids', 'model_names'),
+            'description': (
+                'model_ids: comma-separated API identifiers — '
+                'e.g. google/gemma-3-27b-it:free,deepseek/deepseek-chat-v3-0324:free<br>'
+                'model_names: matching display names — e.g. Gemma 3 27B,DeepSeek Chat V3'
+            ),
+        }),
+        ('Notes', {
+            'fields': ('note',),
+        }),
+    )
+
+    def provider_badge(self, obj):
+        colours = LLMProviderAdmin.PROVIDER_COLOURS
+        c = colours.get(obj.provider, '#6b7280')
+        return format_html(
+            '<span style="background:{};color:#fff;padding:2px 8px;'
+            'border-radius:9999px;font-size:11px">{}</span>',
+            c, obj.get_provider_display()
+        )
+    provider_badge.short_description = "Provider"
+
+    def masked_key_col(self, obj):
+        return obj.masked_key() or mark_safe('<span style="color:#6b7280">—</span>')
+    masked_key_col.short_description = "API Key"
+
+    def model_count(self, obj):
+        n = len(obj.models_list())
+        return f"{n} model{'s' if n != 1 else ''}"
+    model_count.short_description = "Models"

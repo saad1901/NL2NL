@@ -115,3 +115,55 @@ class DashboardChart(models.Model):
 
     def __str__(self):
         return f"{self.title} — {self.database.label}"
+
+
+class CommunityKey(models.Model):
+    """
+    Community-shared API keys added by admin so new users can start immediately
+    without needing their own key.
+    """
+    PROVIDER_CHOICES = [
+        ('gemini',      'Google Gemini'),
+        ('openai',      'OpenAI'),
+        ('anthropic',   'Anthropic'),
+        ('openrouter',  'OpenRouter'),
+        ('ollama',      'Ollama (local)'),
+    ]
+
+    provider     = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
+    display_name = models.CharField(max_length=100, help_text="Human label, e.g. 'OpenRouter Free Pool #1'")
+    api_key      = models.TextField(help_text="The actual API key — shown masked to users")
+    base_url     = models.CharField(max_length=255, blank=True,
+                                    help_text="Only for Ollama — base URL")
+    # Comma-separated list: "gemini-2.0-flash,gemini-1.5-flash"
+    model_ids    = models.TextField(
+        help_text="Comma-separated model IDs available with this key, "
+                  "e.g. google/gemma-3-27b-it:free,deepseek/deepseek-chat-v3-0324:free"
+    )
+    model_names  = models.TextField(
+        blank=True,
+        help_text="Comma-separated display names matching the same order as model_ids"
+    )
+    note         = models.CharField(max_length=300, blank=True,
+                                    help_text="Short note shown to users, e.g. 'Rate limit: 20 req/min'")
+    is_active    = models.BooleanField(default=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['provider', 'display_name']
+        verbose_name = "Community Key"
+        verbose_name_plural = "Community Keys"
+
+    def __str__(self):
+        return f"{self.get_provider_display()} — {self.display_name}"
+
+    def masked_key(self):
+        if not self.api_key:
+            return ''
+        return self.api_key[:8] + '••••••••' + self.api_key[-4:]
+
+    def models_list(self):
+        """Returns list of (model_id, display_name) tuples."""
+        ids   = [m.strip() for m in self.model_ids.split(',') if m.strip()]
+        names = [n.strip() for n in self.model_names.split(',') if n.strip()]
+        return [(ids[i], names[i] if i < len(names) else ids[i]) for i in range(len(ids))]

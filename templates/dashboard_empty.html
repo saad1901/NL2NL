@@ -1,25 +1,318 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard — NL2SQL{% endblock %}
+{% block title %}Welcome to NL2SQL{% endblock %}
+
+{% block extra_head %}
+<style>
+  .step-line::after {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 32px;
+    bottom: -12px;
+    width: 1px;
+    background: linear-gradient(to bottom, rgba(92,124,250,0.4), transparent);
+  }
+  .step-line:last-child::after { display: none; }
+  .key-card:hover { border-color: rgba(92,124,250,0.4); }
+  .copy-btn { transition: all .15s ease; }
+  .copy-btn:active { transform: scale(.92); }
+</style>
+{% endblock %}
+
 {% block body %}
-<div class="min-h-screen gradient-bg flex items-center justify-center px-4">
-  <div class="text-center max-w-md">
-    <div class="w-20 h-20 rounded-2xl bg-brand-600/20 border border-brand-500/20 flex items-center justify-center mx-auto mb-6">
-      <svg class="w-10 h-10 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
-      </svg>
+<div class="min-h-screen gradient-bg">
+
+  <!-- Nav -->
+  <nav class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
+        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <span class="text-base font-bold text-white">NL<span class="text-brand-400">2</span>SQL</span>
     </div>
-    <h2 class="text-2xl font-bold text-white mb-2">No databases yet</h2>
-    <p class="text-gray-400 text-sm mb-8">Connect your first database to start asking questions in plain English.</p>
-    <a href="/databases/add/"
-      class="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition glow">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-      </svg>
-      Add your first database
-    </a>
-    <div class="mt-6">
-      <a href="/logout/" class="text-xs text-gray-600 hover:text-gray-400 transition">Sign out</a>
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-gray-400">Signed in as <strong class="text-white">{{ user.first_name|default:user.email }}</strong></span>
+      <a href="/logout/" class="text-xs text-gray-600 hover:text-gray-300 transition">Sign out</a>
     </div>
+  </nav>
+
+  <div class="max-w-3xl mx-auto px-6 py-12 space-y-12">
+
+    <!-- ── Hero / Blog intro ── -->
+    <div class="space-y-4">
+      <div class="flex items-center gap-3 text-xs text-gray-500">
+        <div class="w-6 h-6 rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">S</div>
+        <span>by <strong class="text-gray-300">saad1921</strong></span>
+        <span>·</span>
+        <span>Getting Started Guide</span>
+      </div>
+
+      <h1 class="text-3xl font-bold text-white leading-tight">
+        Talk to your databases.<br/>
+        <span class="text-brand-400">No SQL required.</span>
+      </h1>
+
+      <p class="text-gray-400 leading-relaxed text-sm max-w-2xl">
+        Hey — welcome to NL2SQL. I built this because I was tired of writing the same
+        <code class="bg-white/5 px-1.5 py-0.5 rounded text-brand-300 font-mono text-xs">SELECT</code> queries every day
+        just to answer simple business questions. Now you just… ask. In plain English. The AI figures out the SQL,
+        runs it on your database, and hands you back the answer with a table and a chart.
+      </p>
+
+      <p class="text-gray-400 leading-relaxed text-sm max-w-2xl">
+        It works with PostgreSQL, MySQL, SQL Server, SQLite — and yes, you can also just
+        drag-and-drop a CSV or Excel file and start querying it immediately. No database server required for that.
+      </p>
+    </div>
+
+    <!-- ── Quick-start steps ── -->
+    <div>
+      <h2 class="text-base font-semibold text-white mb-5">Two steps to your first answer</h2>
+      <div class="space-y-3">
+
+        <!-- Step 1 -->
+        <div class="relative step-line flex gap-4 pb-6">
+          <div class="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5 z-10">1</div>
+          <div class="flex-1 glass rounded-2xl p-5">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h3 class="text-sm font-semibold text-white mb-1">Add an AI model</h3>
+                <p class="text-xs text-gray-400 leading-relaxed max-w-lg">
+                  NL2SQL needs an LLM to turn your question into SQL. The free options below work great.
+                  Go to <strong class="text-gray-200">Settings</strong>, pick a provider, paste the key, and add a model.
+                  Takes under a minute.
+                </p>
+              </div>
+              <a href="/settings/"
+                class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium rounded-xl transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Open Settings
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="relative flex gap-4">
+          <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5 z-10">2</div>
+          <div class="flex-1 glass rounded-2xl p-5">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h3 class="text-sm font-semibold text-white mb-1">Connect a database (or upload a file)</h3>
+                <p class="text-xs text-gray-400 leading-relaxed max-w-lg">
+                  Connect PostgreSQL, MySQL, SQL Server, or a local SQLite file.
+                  Or skip the database entirely — upload a <strong class="text-gray-200">CSV or Excel file</strong>
+                  and it becomes a queryable database instantly. Great for testing.
+                </p>
+              </div>
+              <button onclick="openAddDbModal()"
+                class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded-xl transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add Database
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Community Keys ── -->
+    {% if community_keys %}
+    <div>
+      <div class="flex items-center gap-2.5 mb-2">
+        <div class="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+          <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+        </div>
+        <h2 class="text-base font-semibold text-white">Community API Keys</h2>
+        <span class="tag bg-green-500/10 text-green-400 text-xs">Free to use</span>
+      </div>
+      <p class="text-xs text-gray-500 mb-5 ml-7.5">
+        I've shared some keys so you can get started right away without signing up anywhere.
+        Copy a key, go to Settings → add the provider, paste it, then add one of the listed models.
+        These are shared — please don't abuse them.
+      </p>
+
+      <div class="space-y-3">
+        {% for key in community_keys %}
+        <div class="key-card glass rounded-2xl border border-white/5 overflow-hidden transition">
+          <!-- Header -->
+          <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                {% if key.provider == 'gemini' %}bg-blue-500/15{% elif key.provider == 'openrouter' %}bg-purple-500/15{% elif key.provider == 'openai' %}bg-green-500/15{% elif key.provider == 'anthropic' %}bg-yellow-500/15{% else %}bg-gray-500/15{% endif %}">
+                <svg class="w-4 h-4 {% if key.provider == 'gemini' %}text-blue-400{% elif key.provider == 'openrouter' %}text-purple-400{% elif key.provider == 'openai' %}text-green-400{% elif key.provider == 'anthropic' %}text-yellow-400{% else %}text-gray-400{% endif %}"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <p class="text-sm font-semibold text-white">{{ key.display_name }}</p>
+                  <span class="tag text-xs
+                    {% if key.provider == 'gemini' %}bg-blue-500/15 text-blue-300
+                    {% elif key.provider == 'openrouter' %}bg-purple-500/15 text-purple-300
+                    {% elif key.provider == 'openai' %}bg-green-500/15 text-green-300
+                    {% elif key.provider == 'anthropic' %}bg-yellow-500/15 text-yellow-300
+                    {% else %}bg-gray-500/15 text-gray-300{% endif %}">
+                    {{ key.get_provider_display }}
+                  </span>
+                </div>
+                {% if key.note %}
+                <p class="text-xs text-gray-500 mt-0.5">{{ key.note }}</p>
+                {% endif %}
+              </div>
+            </div>
+            <!-- API key copy -->
+            <div class="flex items-center gap-2">
+              <code class="text-xs font-mono text-gray-400 bg-white/5 px-2.5 py-1 rounded-lg">{{ key.masked_key }}</code>
+              <button class="copy-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                             bg-brand-500/15 text-brand-300 hover:bg-brand-500/25 hover:text-white transition"
+                      onclick="copyKey('{{ key.api_key|escapejs }}', this)">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3"/>
+                </svg>
+                Copy Key
+              </button>
+            </div>
+          </div>
+
+          <!-- Models list -->
+          {% with models=key.models_list %}
+          {% if models %}
+          <div class="px-5 py-3">
+            <p class="text-xs text-gray-600 uppercase tracking-wider mb-2">Available models</p>
+            <div class="flex flex-wrap gap-2">
+              {% for model_id, model_name in models %}
+              <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/3 border border-white/5">
+                <span class="text-xs text-gray-300 font-medium">{{ model_name }}</span>
+                <button class="text-gray-600 hover:text-brand-400 transition"
+                        onclick="copyModelId('{{ model_id|escapejs }}', this)" title="Copy model ID">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3"/>
+                  </svg>
+                </button>
+                <code class="text-xs text-gray-600 font-mono hidden model-id-text">{{ model_id }}</code>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          {% endwith %}
+
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <!-- No community keys yet — show where to get a free one -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-sm font-semibold text-white mb-3">Get a free API key in 2 minutes</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <a href="https://aistudio.google.com/apikey" target="_blank"
+           class="flex items-start gap-3 p-4 rounded-xl bg-white/3 border border-white/5 hover:border-blue-500/30 hover:bg-blue-500/5 transition">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">Google Gemini</p>
+            <p class="text-xs text-gray-500 mt-0.5">Free · 1500 req/day · No billing required</p>
+            <p class="text-xs text-brand-400 mt-1">aistudio.google.com/apikey →</p>
+          </div>
+        </a>
+        <a href="https://openrouter.ai/keys" target="_blank"
+           class="flex items-start gap-3 p-4 rounded-xl bg-white/3 border border-white/5 hover:border-purple-500/30 hover:bg-purple-500/5 transition">
+          <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">OpenRouter</p>
+            <p class="text-xs text-gray-500 mt-0.5">50+ free models · No billing required</p>
+            <p class="text-xs text-brand-400 mt-1">openrouter.ai/keys →</p>
+          </div>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── What you can do ── -->
+    <div>
+      <h2 class="text-base font-semibold text-white mb-1">What you can do once you're set up</h2>
+      <p class="text-xs text-gray-500 mb-5">This is the part that's actually fun.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="glass rounded-xl p-4 border border-white/5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">💬</span>
+            <p class="text-sm font-medium text-white">Chat with your data</p>
+          </div>
+          <p class="text-xs text-gray-500">"Show me the top 10 customers by revenue" → instant answer with table and summary.</p>
+        </div>
+        <div class="glass rounded-xl p-4 border border-white/5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">📊</span>
+            <p class="text-sm font-medium text-white">Build dashboards</p>
+          </div>
+          <p class="text-xs text-gray-500">Ask for a chart — the AI picks the right type and builds it with ECharts. Save it to your dashboard.</p>
+        </div>
+        <div class="glass rounded-xl p-4 border border-white/5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">📁</span>
+            <p class="text-sm font-medium text-white">Upload CSV / Excel</p>
+          </div>
+          <p class="text-xs text-gray-500">No database server needed. Drop a spreadsheet and query it like a database.</p>
+        </div>
+        <div class="glass rounded-xl p-4 border border-white/5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">🔁</span>
+            <p class="text-sm font-medium text-white">Self-correcting AI</p>
+          </div>
+          <p class="text-xs text-gray-500">If the first query fails, the AI checks the schema, fixes the SQL, and tries again — up to 8 times.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="border-t border-white/5 pt-6 flex items-center justify-between text-xs text-gray-600">
+      <span>Built by <a href="https://github.com/saad1921" target="_blank" class="text-brand-400 hover:underline">saad1921</a></span>
+      <div class="flex items-center gap-4">
+        <a href="https://github.com/saad1921/NL2NL" target="_blank" class="hover:text-gray-300 transition">GitHub</a>
+        <a href="/docs/" class="hover:text-gray-300 transition">Docs</a>
+        <button onclick="toggleTheme()" class="hover:text-gray-300 transition">Toggle theme</button>
+      </div>
+    </div>
+
   </div>
 </div>
+
+<script>
+function copyKey(key, btn) {
+  navigator.clipboard.writeText(key).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!`;
+    btn.classList.add('text-green-400');
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('text-green-400'); }, 2000);
+  });
+}
+
+function copyModelId(modelId, btn) {
+  navigator.clipboard.writeText(modelId).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  });
+}
+</script>
 {% endblock %}

@@ -13,7 +13,7 @@ import sqlite3
 
 logger = logging.getLogger('app.views')
 
-from .models import DatabaseConnection, QueryHistory, LLMProvider, LLMModel, DashboardChart
+from .models import DatabaseConnection, QueryHistory, LLMProvider, LLMModel, DashboardChart, CommunityKey
 from .aiTools import fetch_schema
 from .aiView import run_nl_query
 
@@ -79,7 +79,12 @@ def dashboard_view(request):
     dbs = DatabaseConnection.objects.filter(user=request.user)
     if dbs.exists():
         return redirect(f'/chat/{dbs.first().id}/')
-    return render(request, 'dashboard_empty.html', {'user': request.user})
+    # New user — show onboarding page with community keys
+    community_keys = CommunityKey.objects.filter(is_active=True)
+    return render(request, 'dashboard_empty.html', {
+        'user': request.user,
+        'community_keys': community_keys,
+    })
 
 
 def chat_view(request, db_id):
@@ -394,11 +399,13 @@ def settings_view(request):
         return redirect('/login/')
     providers = LLMProvider.objects.filter(user=request.user).prefetch_related('models')
     all_dbs   = DatabaseConnection.objects.filter(user=request.user)
+    community_keys = CommunityKey.objects.filter(is_active=True)
     return render(request, 'settings.html', {
         'user': request.user,
         'providers': providers,
         'provider_choices': LLMProvider.PROVIDER_CHOICES,
         'all_dbs': all_dbs,
+        'community_keys': community_keys,
     })
 
 
